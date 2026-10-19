@@ -27,6 +27,28 @@ def _guardar_sql(texto):
 db.on_sql(_guardar_sql)
 
 
+# Una conexión MySQL por petición (se abre al primer uso y se cierra al terminar)
+def _conexion_peticion():
+    if not has_request_context():
+        return None
+    if "db_conn" not in g:
+        g.db_conn = db.get_conn(autocommit=True)
+    return g.db_conn
+
+
+db.usar_conexion_compartida(_conexion_peticion)
+
+
+@app.teardown_appcontext
+def _cerrar_conexion(exc):
+    conn = g.pop("db_conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
 @app.before_request
 def _sql_inicio():
     g.sql = []

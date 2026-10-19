@@ -36,7 +36,7 @@ CONFIG = load_config()
 # ======================================================
 # Conexión
 # ======================================================
-def get_conn():
+def get_conn(autocommit=False):
     cfg = CONFIG["mysql"]
     if not cfg:
         raise pymysql.err.OperationalError(
@@ -49,7 +49,7 @@ def get_conn():
         database=cfg["database"],
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False,
+        autocommit=autocommit,
         ssl={"ssl": {}} if cfg.get("ssl") else None,
     )
 
@@ -90,15 +90,33 @@ class _CursorLog:
         return getattr(self._cur, nombre)
 
 
+# Conexión compartida: la app web puede entregar una sola conexión por petición
+# (así una página con varias consultas no abre una conexión nueva para cada una)
+_proveedor = None
+
+
+def usar_conexion_compartida(fn):
+    global _proveedor
+    _proveedor = fn
+
+
+def _compartida():
+    return _proveedor() if _proveedor else None
+
+
 def query(sql, params=None):
-    conn = get_conn()
+    conn = _compartida()
+    propia = conn is None
+    if propia:
+        conn = get_conn()
     try:
         with conn.cursor() as cur:
             _log(cur, sql, params)
             cur.execute(sql, params or ())
             return cur.fetchall()
     finally:
-        conn.close()
+        if propia:
+            conn.close()
 
 
 def one(sql, params=None):
@@ -108,8 +126,12 @@ def one(sql, params=None):
 
 def run_tx(fn):
     """Ejecuta fn(cursor) dentro de una transacción (commit / rollback)."""
-    conn = get_conn()
+    conn = _compartida()
+    propia = conn is None
+    if propia:
+        conn = get_conn()
     try:
+        conn.begin()
         _emitir("START TRANSACTION;")
         with conn.cursor() as cur:
             res = fn(_CursorLog(cur))
@@ -121,7 +143,8 @@ def run_tx(fn):
         _emitir("ROLLBACK;")
         raise
     finally:
-        conn.close()
+        if propia:
+            conn.close()
 
 
 def execute(sql, params=None):
