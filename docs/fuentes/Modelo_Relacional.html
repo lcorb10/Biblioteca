@@ -1,0 +1,154 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#fff}svg{display:block}</style>
+</head><body>
+<svg id="s" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const W = 1960, H = 1390;
+const svg = document.getElementById("s");
+svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a, parent = svg) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); parent.appendChild(e); return e; };
+const txt = (x, y, s, a = {}, parent = svg) => { const e = el("text", { x, y, "font-family": "Inter, Arial, sans-serif", "font-size": 12, fill: "#1f1f1f", ...a }, parent); e.textContent = s; return e; };
+const ctx = document.createElement("canvas").getContext("2d");
+const measure = (s, w = 400) => { ctx.font = `${w} 12px Inter, Arial`; return ctx.measureText(s).width; };
+
+// paletas en el estilo original: [encabezado, fila clara, fila oscura, borde]
+const P = {
+  teal:   ["#B2DFDB", "#EAF6F5", "#B2DFDB", "#5BB6AD"],
+  tealb:  ["#A8D8DC", "#E8F4FB", "#A8D8DC", "#4FA8C9"],
+  green:  ["#C8E6C9", "#ECF8EC", "#C8F5C0", "#5CB85C"],
+  orange: ["#FFD6A6", "#FFF5DF", "#FFD9A3", "#F2B83D"],
+  yellow: ["#FFF0B3", "#FFF8DC", "#FFEFB0", "#F2C94C"],
+  pink:   ["#F9D9DE", "#FDF0F3", "#F9D9DE", "#E58FB0"],
+  blue:   ["#BBDEFB", "#EAF4FE", "#BBDEFB", "#64A8E8"],
+  rose:   ["#F8C5D8", "#FDEFF4", "#F8C5D8", "#E57BA8"],
+  sky:    ["#D6E8F7", "#EEF5FC", "#D6E8F7", "#6AA9E0"],
+  purple: ["#DDB8E6", "#F5E6F9", "#DDB8E6", "#BB77CC"],
+  gray:   ["#DCDFE6", "#F4F5F8", "#DCDFE6", "#8C93A3"],
+};
+const T = {
+  libro_categoria: { x: 140, y: 110, c: "teal", rows: [["PK, FK", "isbn", "VARCHAR(20)"], ["PK, FK", "id_categoria", "INT"]] },
+  categoria: { x: 170, y: 270, c: "green", rows: [["PK", "id_categoria", "INT"], ["UK", "nombre", "VARCHAR(80)"]] },
+  libro: { x: 720, y: 300, c: "orange", rows: [["PK", "isbn", "VARCHAR(20)"], ["", "titulo", "VARCHAR(200)"], ["FK (nulo)", "id_editorial", "INT"], ["", "anio", "SMALLINT"], ["", "descripcion", "TEXT"]] },
+  libro_autor: { x: 1330, y: 170, c: "tealb", rows: [["PK, FK", "isbn", "VARCHAR(20)"], ["PK, FK", "id_autor", "INT"]] },
+  autor: { x: 1400, y: 330, c: "blue", rows: [["PK", "id_autor", "INT"], ["UK", "nombre", "VARCHAR(120)"]] },
+  editorial: { x: 170, y: 470, c: "pink", rows: [["PK", "id_editorial", "INT"], ["UK", "nombre", "VARCHAR(100)"]] },
+  ejemplar: { x: 720, y: 520, c: "yellow", rows: [["PK", "id_ejemplar", "INT"], ["UK", "codigo_barras", "VARCHAR(30)"], ["FK", "isbn", "VARCHAR(20)"], ["", "ubicacion", "VARCHAR(80)"], ["", "estado", "ENUM('disponible','prestado','perdido')"]] },
+  configuracion: { x: 1400, y: 500, c: "gray", rows: [["PK", "clave", "VARCHAR(50)"], ["", "valor", "VARCHAR(100)"], ["", "descripcion", "VARCHAR(200)"]] },
+  usuario: { x: 30, y: 760, c: "rose", rows: [["PK", "id_usuario", "INT"], ["UK", "codigo", "VARCHAR(20)"], ["UK", "identificacion", "VARCHAR(20)"], ["", "nombres", "VARCHAR(120)"], ["UK", "correo", "VARCHAR(120)"], ["", "rol", "ENUM('estudiante','docente')"], ["", "carrera", "VARCHAR(100) NULL"], ["", "estado", "ENUM('activo','bloqueado')"]] },
+  prestamo: { x: 640, y: 760, c: "sky", rows: [["PK", "id_prestamo", "INT"], ["FK", "id_usuario", "INT"], ["FK", "isbn", "VARCHAR(20)"], ["FK (nulo)", "id_ejemplar", "INT"], ["FK (nulo)", "id_personal", "INT"], ["", "fecha_solicitud", "DATETIME"], ["", "fecha_prestamo", "DATE"], ["", "fecha_vencimiento", "DATE"], ["", "fecha_devolucion", "DATE"], ["", "estado", "ENUM('solicitado','rechazado','activo','devuelto')"]] },
+  devolucion: { x: 1330, y: 760, c: "purple", rows: [["PK", "id_devolucion", "INT"], ["FK, UK", "id_prestamo", "INT"], ["FK (nulo)", "id_personal", "INT"], ["", "fecha_devolucion", "DATE"], ["", "dias_retraso", "INT"], ["", "multa", "DECIMAL(10,2)"], ["", "condicion", "ENUM('bueno','dañado','páginas faltantes')"], ["", "observaciones", "VARCHAR(300)"]] },
+  personal: { x: 250, y: 1110, c: "purple", rows: [["PK", "id_personal", "INT"], ["UK", "login", "VARCHAR(50)"], ["", "clave_hash", "VARCHAR(200)"], ["", "nombres", "VARCHAR(100)"], ["", "rol", "ENUM('administrador','bibliotecario')"]] },
+};
+const HH = 24, RH = 20, PADX = 8;
+
+// medir columnas
+for (const [name, t] of Object.entries(T)) {
+  t.c0 = Math.max(46, ...t.rows.map(r => measure(r[0], 500) + 2 * PADX));
+  t.c1 = Math.max(...t.rows.map(r => measure(r[1]) + 2 * PADX), 110);
+  t.c2 = Math.max(...t.rows.map(r => measure(r[2]) + 2 * PADX), 90);
+  t.w = Math.max(t.c0 + t.c1 + t.c2, measure(name, 500) + 40);
+  t.c2 = t.w - t.c0 - t.c1;
+  t.h = HH + t.rows.length * RH;
+}
+const anchor = (tn, ri, side) => {
+  const t = T[tn];
+  if (side === "top") return { x: t.x + (ri ?? t.w / 2), y: t.y, d: [0, -1] };
+  if (side === "bottom") return { x: t.x + (ri ?? t.w / 2), y: t.y + t.h, d: [0, 1] };
+  const y = t.y + HH + ri * RH + RH / 2;
+  return side === "left" ? { x: t.x, y, d: [-1, 0] } : { x: t.x + t.w, y, d: [1, 0] };
+};
+
+const lines = el("g", { stroke: "#4a4a4a", "stroke-width": 1.1, fill: "none" });
+// marcador IE (patas de gallo) en el extremo p, dirección d (hacia afuera de la tabla)
+function marker(p, kind) {
+  const [dx, dy] = p.d, nx = -dy, ny = dx;
+  const at = (k) => ({ x: p.x + dx * k, y: p.y + dy * k });
+  const bar = (k) => { const q = at(k); el("line", { x1: q.x + nx * 7, y1: q.y + ny * 7, x2: q.x - nx * 7, y2: q.y - ny * 7 }, lines); };
+  const circ = (k) => { const q = at(k); el("circle", { cx: q.x, cy: q.y, r: 5.5, fill: "#fff" }, lines); };
+  const crow = () => { const q = at(14); for (const s of [-1, 0, 1]) el("line", { x1: q.x, y1: q.y, x2: p.x + nx * 8 * s, y2: p.y + ny * 8 * s }, lines); };
+  if (kind === "||") { bar(8); bar(14); }
+  if (kind === "o|") { bar(8); circ(20); }
+  if (kind === "|<") { crow(); bar(20); }
+  if (kind === "o<") { crow(); circ(22); }
+}
+// conector ortogonal: a -> (stub) -> codos -> (stub) -> b
+function link(a, b, ka, kb, via) {
+  const s1 = { x: a.x + a.d[0] * 26, y: a.y + a.d[1] * 26 }, s2 = { x: b.x + b.d[0] * 26, y: b.y + b.d[1] * 26 };
+  let pts = [a, s1];
+  if (via) pts.push(...via(s1, s2)); else {
+    if (a.d[0] !== 0 && b.d[0] !== 0) { const mx = (s1.x + s2.x) / 2; pts.push({ x: mx, y: s1.y }, { x: mx, y: s2.y }); }
+    else if (a.d[1] !== 0 && b.d[1] !== 0) { const my = (s1.y + s2.y) / 2; pts.push({ x: s1.x, y: my }, { x: s2.x, y: my }); }
+    else if (a.d[0] !== 0) pts.push({ x: s2.x, y: s1.y }); else pts.push({ x: s1.x, y: s2.y });
+  }
+  pts.push(s2, b);
+  el("polyline", { points: pts.map(p => `${p.x},${p.y}`).join(" ") }, lines);
+  marker(a, ka); marker(b, kb);
+}
+
+// título
+txt(W / 2, 44, "Modelo Relacional - Biblioteca Universitaria", { "text-anchor": "middle", "font-size": 17, "font-weight": 500 });
+
+// relaciones (padre -> hijo)
+link(anchor("categoria", null, "top"), anchor("libro_categoria", null, "bottom"), "||", "o<");
+link(anchor("libro", 0, "left"), anchor("libro_categoria", 0, "right"), "||", "o<");
+link(anchor("libro", 0, "right"), anchor("libro_autor", 0, "left"), "||", "|<");
+link(anchor("autor", 0, "right"), anchor("libro_autor", 1, "right"), "||", "o<", (s1, s2) => [{ x: Math.max(s1.x, s2.x) + 20, y: s1.y }, { x: Math.max(s1.x, s2.x) + 20, y: s2.y }]);
+link(anchor("editorial", 0, "right"), anchor("libro", 2, "left"), "o|", "o<");
+link(anchor("libro", 0, "right"), anchor("ejemplar", 2, "right"), "||", "o<", (s1, s2) => [{ x: s1.x + 90, y: s1.y }, { x: s1.x + 90, y: s2.y }]);
+link(anchor("libro", 4, "left"), anchor("prestamo", 2, "left"), "||", "o<", (s1, s2) => [{ x: s1.x - 60, y: s1.y }, { x: s1.x - 60, y: s2.y }]);
+link(anchor("usuario", 0, "right"), anchor("prestamo", 1, "left"), "||", "o<", (s1, s2) => [{ x: 580, y: s1.y }, { x: 580, y: s2.y }]);
+link(anchor("ejemplar", 0, "left"), anchor("prestamo", 3, "left"), "o|", "o<", (s1, s2) => [{ x: 600, y: s1.y }, { x: 600, y: s2.y }]);
+link(anchor("personal", 0, "right"), anchor("prestamo", null, "bottom"), "o|", "o<", (s1, s2) => [{ x: s2.x, y: s1.y }]);
+link(anchor("prestamo", 0, "right"), anchor("devolucion", 1, "left"), "||", "o|");
+link(anchor("personal", 0, "right"), anchor("devolucion", 2, "right"), "o|", "o<", (s1, s2) => [{ x: T.devolucion.x + T.devolucion.w + 60, y: s1.y }, { x: T.devolucion.x + T.devolucion.w + 60, y: s2.y }]);
+
+// tablas
+for (const [name, t] of Object.entries(T)) {
+  const [hc, lc, dc, bc] = P[t.c];
+  const g = el("g", {});
+  el("rect", { x: t.x, y: t.y, width: t.w, height: t.h, rx: 8, fill: lc, stroke: bc, "stroke-width": 1.3 }, g);
+  el("path", { d: `M${t.x} ${t.y + HH} V${t.y + 8} Q${t.x} ${t.y} ${t.x + 8} ${t.y} H${t.x + t.w - 8} Q${t.x + t.w} ${t.y} ${t.x + t.w} ${t.y + 8} V${t.y + HH} Z`, fill: hc }, g);
+  t.rows.forEach((r, i) => {
+    const y = t.y + HH + i * RH;
+    if (i % 2) el("rect", { x: t.x + 1, y, width: t.w - 2, height: RH, fill: dc, opacity: .75 }, g);
+    if (i === t.rows.length - 1) el("rect", { x: t.x, y: y, width: t.w, height: RH, rx: 8, fill: "none" }, g);
+    el("line", { x1: t.x, y1: y, x2: t.x + t.w, y2: y, stroke: bc, "stroke-width": .6, opacity: .7 }, g);
+    txt(t.x + t.c0 / 2, y + 14, r[0], { "text-anchor": "middle", "font-size": 11, "font-weight": r[0] ? 500 : 400 }, g);
+    txt(t.x + t.c0 + PADX, y + 14, r[1], { "font-size": 11.5 }, g);
+    txt(t.x + t.c0 + t.c1 + PADX, y + 14, r[2], { "font-size": 11 }, g);
+  });
+  for (const cx of [t.c0, t.c0 + t.c1]) el("line", { x1: t.x + cx, y1: t.y + HH, x2: t.x + cx, y2: t.y + t.h, stroke: bc, "stroke-width": .8 }, g);
+  el("rect", { x: t.x, y: t.y, width: t.w, height: t.h, rx: 8, fill: "none", stroke: bc, "stroke-width": 1.4 }, g);
+  txt(t.x + t.w / 2, t.y + 16, name, { "text-anchor": "middle", "font-size": 12, "font-weight": 500 }, g);
+}
+
+// nota de configuracion
+txt(T.configuracion.x, T.configuracion.y + T.configuracion.h + 18, "Tarifa de multa por día, días de préstamo y máximo de préstamos", { "font-size": 11, fill: "#5f6470" });
+
+// leyenda
+const lx = 940, ly = 1200;
+el("rect", { x: lx, y: ly, width: 560, height: 168, rx: 8, fill: "#fafafa", stroke: "#cfcfcf" });
+txt(lx + 16, ly + 24, "Notación", { "font-weight": 600 });
+const demo = (y, kind, label) => {
+  const a = { x: lx + 120, y, d: [-1, 0] };
+  el("line", { x1: lx + 20, y1: y, x2: lx + 120, y2: y }, lines);
+  el("line", { x1: lx + 120, y1: y - 9, x2: lx + 120, y2: y + 9, stroke: "#9a9a9a" }, lines);
+  marker(a, kind);
+  txt(lx + 138, y + 4, label, { "font-size": 11.5 });
+};
+demo(ly + 50, "||", "uno y solo uno");
+demo(ly + 78, "o|", "cero o uno (FK que acepta NULL)");
+demo(ly + 106, "|<", "uno o muchos");
+demo(ly + 134, "o<", "cero o muchos");
+txt(lx + 360, ly + 50, "PK  clave primaria", { "font-size": 11.5 });
+txt(lx + 360, ly + 78, "FK  clave foránea", { "font-size": 11.5 });
+txt(lx + 360, ly + 106, "UK  valor único (UNIQUE)", { "font-size": 11.5 });
+txt(lx + 360, ly + 134, "(nulo)  acepta NULL", { "font-size": 11.5 });
+svg.appendChild(lines); // líneas encima de los fondos, debajo no tapan texto
+// reordenar: tablas sobre líneas
+for (const g of [...svg.querySelectorAll("svg > g")].filter(g => g !== lines)) svg.appendChild(g);
+</script>
+</body></html>

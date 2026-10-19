@@ -4,13 +4,15 @@
 
 ![MER](docs/MER.png)
 
-Fuente editable: [docs/mer.mmd](docs/mer.mmd) (Mermaid; se puede abrir en https://mermaid.live).
+Notación de Chen: entidades (rectángulos), relaciones (rombos, con su tipo encima), atributos (óvalos; subrayado = identificador) y cardinalidad (mín,máx) junto a cada entidad.
+Fuente editable: [docs/fuentes/MER.html](docs/fuentes/MER.html) · versión Mermaid: [docs/mer.mmd](docs/mer.mmd).
 
 ## Diagrama Relacional
 
 ![Modelo relacional](docs/Modelo_Relacional.png)
 
-Fuente editable: [docs/relacional.mmd](docs/relacional.mmd).
+Notación de patas de gallo; PK = clave primaria, FK = clave foránea, UK = única, (nulo) = acepta NULL.
+Fuente editable: [docs/fuentes/Modelo_Relacional.html](docs/fuentes/Modelo_Relacional.html) · versión Mermaid: [docs/relacional.mmd](docs/relacional.mmd).
 
 ---
 

@@ -1,0 +1,166 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#fff}svg{display:block}</style>
+</head><body>
+<svg id="s" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const W = 1780, H = 1190;
+const svg = document.getElementById("s");
+svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); (p || svg).appendChild(e); return e; };
+const F = "Inter, Arial, sans-serif";
+const txt = (x, y, s, a = {}, p) => { const e = el("text", { x, y, "font-family": F, "font-size": 12, fill: "#1f1f1f", "text-anchor": "middle", "dominant-baseline": "central", ...a }, p); e.textContent = s; return e; };
+const ctx = document.createElement("canvas").getContext("2d");
+const measure = (s, size = 12) => { ctx.font = `400 ${size}px Inter, Arial`; return ctx.measureText(s).width; };
+
+const gLines = el("g", { stroke: "#7a7a7a", "stroke-width": 1, fill: "none" });
+const gAttrLines = el("g", { stroke: "#9a9a9a", "stroke-width": .9 });
+const gShapes = el("g", {});
+const gLabels = el("g", {});
+
+// ---------- entidades ----------
+const E = {
+  AUTOR: [190, 400], LIBRO: [690, 400], EDITORIAL: [1160, 150], CATEGORIA: [1160, 268],
+  EJEMPLAR: [1160, 520], USUARIO: [560, 770], PRESTAMO: [1010, 770], DEVOLUCION: [1430, 770],
+  PERSONAL: [1010, 1080], CONFIGURACION: [210, 1080],
+};
+const EW = {}, EH = 34;
+for (const [n, [x, y]] of Object.entries(E)) {
+  const w = Math.max(84, measure(n, 12) + 28); EW[n] = w;
+}
+const drawEntity = (n) => {
+  const [x, y] = E[n], w = EW[n];
+  el("rect", { x: x - w / 2, y: y - EH / 2, width: w, height: EH, rx: 3, fill: "#FDDCEF", stroke: "#E66AAE", "stroke-width": 1.4 }, gShapes);
+  txt(x, y, n, { "font-size": 12, "font-weight": 500 }, gShapes);
+};
+
+// ---------- atributos ----------
+function attr(ent, x, y, label, key = false) {
+  const [ex, ey] = E[ent];
+  el("line", { x1: ex, y1: ey, x2: x, y2: y }, gAttrLines);
+  const rx = Math.max(40, measure(label, 12) / 2 + 16);
+  el("ellipse", { cx: x, cy: y, rx, ry: 19, fill: "#BFF3EA", stroke: "#4CB8A8", "stroke-width": 1.2 }, gShapes);
+  const t = txt(x, y, label, { "font-size": 12 }, gShapes);
+  if (key) el("line", { x1: x - measure(label) / 2, y1: y + 8, x2: x + measure(label) / 2, y2: y + 8, stroke: "#1f1f1f", "stroke-width": 1 }, gShapes);
+}
+
+// ---------- relaciones (rombo) ----------
+function rel(x, y, label, tipo, tipoPos = "top") {
+  const w = Math.max(84, measure(label, 11.5) + 30), h = 52;
+  el("polygon", { points: `${x},${y - h / 2} ${x + w / 2},${y} ${x},${y + h / 2} ${x - w / 2},${y}`, fill: "#FFD9A6", stroke: "#F0A040", "stroke-width": 1.3 }, gShapes);
+  txt(x, y, label, { "font-size": 11.5 }, gShapes);
+  const [tx, ty] = tipoPos === "top" ? [x, y - h / 2 - 14] : tipoPos === "left" ? [x - w / 2 - 22, y - 14] : [x + w / 2 + 22, y - 14];
+  txt(tx, ty, tipo, { "font-size": 12.5, "font-weight": 600, fill: "#333" }, gLabels);
+}
+const path = (pts) => el("polyline", { points: pts.map(p => p.join(",")).join(" ") }, gLines);
+const card = (x, y, s, anchor = "middle") => txt(x, y, s, { "font-size": 12, "font-weight": 600, fill: "#444", "text-anchor": anchor }, gLabels);
+
+// título
+el("rect", { x: 1060, y: 18, width: 470, height: 36, rx: 4, fill: "#fff", stroke: "#555" });
+txt(1295, 36, "Modelo Entidad-Relación (MER) - Biblioteca Universitaria", { "font-size": 12.5 });
+
+// ===== relaciones y líneas =====
+// escribe  AUTOR (1,N) — LIBRO (1,N)  N:M
+path([[E.AUTOR[0] + EW.AUTOR / 2, 400], [E.LIBRO[0] - EW.LIBRO / 2, 400]]);
+rel(440, 400, "escribe", "N:M");
+card(275, 384, "(1,N)"); card(612, 384, "(1,N)");
+
+// publica  EDITORIAL (0,N) — LIBRO (0,1)  1:N
+path([[700, 383], [700, 150], [E.EDITORIAL[0] - EW.EDITORIAL / 2, 150]]);
+rel(925, 150, "publica", "1:N");
+card(722, 362, "(0,1)", "start"); card(1080, 134, "(0,N)");
+
+// clasificado_en  LIBRO (0,N) — CATEGORIA (0,N)  N:M
+path([[725, 383], [725, 268], [E.CATEGORIA[0] - EW.CATEGORIA / 2, 268]]);
+rel(925, 268, "clasificado_en", "N:M");
+card(747, 300, "(0,N)", "start"); card(1080, 252, "(0,N)");
+
+// tiene  LIBRO (0,N) — EJEMPLAR (1,1)  1:N
+path([[E.LIBRO[0] + EW.LIBRO / 2, 400], [1160, 400], [1160, 503]]);
+rel(925, 400, "tiene", "1:N");
+card(766, 384, "(0,N)"); card(1178, 488, "(1,1)", "start");
+
+// corresponde_a  LIBRO (0,N) — PRESTAMO (1,1)  1:N
+path([[690, 417], [690, 600], [990, 600], [990, 753]]);
+rel(690, 560, "corresponde_a", "1:N", "left");
+card(706, 440, "(0,N)", "start"); card(972, 734, "(1,1)", "end");
+
+// asignado_a  EJEMPLAR (0,N) — PRESTAMO (0,1)  1:N
+path([[1160, 537], [1160, 650], [1030, 650], [1030, 753]]);
+rel(1160, 615, "asignado_a", "1:N", "right");
+card(1178, 556, "(0,N)", "start"); card(1048, 734, "(0,1)", "start");
+
+// solicita  USUARIO (0,N) — PRESTAMO (1,1)  1:N
+path([[E.USUARIO[0] + EW.USUARIO / 2, 770], [E.PRESTAMO[0] - EW.PRESTAMO / 2, 770]]);
+rel(785, 770, "solicita", "1:N");
+card(640, 754, "(0,N)"); card(930, 754, "(1,1)");
+
+// genera  PRESTAMO (0,1) — DEVOLUCION (1,1)  1:1
+path([[E.PRESTAMO[0] + EW.PRESTAMO / 2, 770], [E.DEVOLUCION[0] - EW.DEVOLUCION / 2, 770]]);
+rel(1215, 770, "genera", "1:1");
+card(1090, 754, "(0,1)"); card(1342, 754, "(1,1)");
+
+// aprueba  PERSONAL (0,N) — PRESTAMO (0,1)  1:N
+path([[1010, 787], [1010, 1063]]);
+rel(1010, 930, "aprueba", "1:N", "right");
+card(1026, 806, "(0,1)", "start"); card(1026, 1046, "(0,N)", "start");
+
+// recibe  PERSONAL (0,N) — DEVOLUCION (0,1)  1:N
+path([[E.PERSONAL[0] + EW.PERSONAL / 2, 1080], [1430, 1080], [1430, 787]]);
+rel(1430, 1080, "recibe", "1:N", "right");
+card(1094, 1064, "(0,N)"); card(1446, 806, "(0,1)", "start");
+
+// ===== atributos =====
+attr("AUTOR", 85, 345, "nombre"); attr("AUTOR", 85, 455, "id_autor", true);
+
+attr("LIBRO", 360, 325, "ISBN", true); attr("LIBRO", 480, 230, "titulo");
+attr("LIBRO", 600, 180, "año"); attr("LIBRO", 552, 332, "descripcion");
+
+attr("EDITORIAL", 1350, 108, "id_editorial", true); attr("EDITORIAL", 1350, 170, "nombre");
+attr("CATEGORIA", 1350, 236, "id_categoria", true); attr("CATEGORIA", 1350, 298, "nombre");
+
+attr("EJEMPLAR", 1355, 440, "id_ejemplar", true); attr("EJEMPLAR", 1385, 492, "codigo_barras");
+attr("EJEMPLAR", 1385, 546, "ubicación"); attr("EJEMPLAR", 1345, 600, "estado");
+
+attr("USUARIO", 430, 655, "id_usuario", true); attr("USUARIO", 560, 640, "codigo");
+attr("USUARIO", 320, 710, "identificación"); attr("USUARIO", 300, 770, "nombres");
+attr("USUARIO", 320, 830, "correo"); attr("USUARIO", 410, 885, "rol");
+attr("USUARIO", 535, 900, "carrera"); attr("USUARIO", 665, 880, "estado");
+
+attr("PRESTAMO", 870, 690, "id_prestamo", true); attr("PRESTAMO", 835, 860, "fecha_solicitud");
+attr("PRESTAMO", 880, 960, "fecha_prestamo"); attr("PRESTAMO", 1170, 700, "fecha_vencimiento");
+attr("PRESTAMO", 1195, 860, "fecha_devolución"); attr("PRESTAMO", 1140, 960, "estado");
+
+attr("DEVOLUCION", 1620, 640, "observaciones"); attr("DEVOLUCION", 1640, 695, "id_devolución", true);
+attr("DEVOLUCION", 1650, 750, "fecha_devolución"); attr("DEVOLUCION", 1650, 805, "días_retraso");
+attr("DEVOLUCION", 1630, 860, "multa"); attr("DEVOLUCION", 1580, 915, "condición");
+
+attr("PERSONAL", 850, 1030, "id_personal", true); attr("PERSONAL", 830, 1090, "login");
+attr("PERSONAL", 870, 1148, "clave"); attr("PERSONAL", 1150, 1148, "nombres");
+attr("PERSONAL", 1190, 1025, "rol");
+
+attr("CONFIGURACION", 80, 1015, "clave", true); attr("CONFIGURACION", 80, 1140, "valor");
+attr("CONFIGURACION", 360, 1140, "descripción");
+
+for (const n of Object.keys(E)) drawEntity(n);
+
+// notas
+txt(285, 1062, "tarifa de multa por día, días de préstamo y máximo de préstamos", { "font-size": 10.5, fill: "#6b6b6b", "text-anchor": "start" }, gLabels);
+
+
+// leyenda
+const lx = 40, ly = 40;
+el("rect", { x: lx, y: ly, width: 360, height: 142, rx: 6, fill: "#fafafa", stroke: "#d0d0d0" });
+txt(lx + 16, ly + 20, "Notación", { "text-anchor": "start", "font-weight": 600 });
+el("rect", { x: lx + 16, y: ly + 36, width: 46, height: 20, rx: 3, fill: "#FDDCEF", stroke: "#E66AAE" });
+txt(lx + 72, ly + 46, "Entidad", { "text-anchor": "start", "font-size": 11.5 });
+el("polygon", { points: `${lx + 185},${ly + 34} ${lx + 207},${ly + 46} ${lx + 185},${ly + 58} ${lx + 163},${ly + 46}`, fill: "#FFD9A6", stroke: "#F0A040" });
+txt(lx + 216, ly + 46, "Relación (tipo encima)", { "text-anchor": "start", "font-size": 11.5 });
+el("ellipse", { cx: lx + 39, cy: ly + 76, rx: 23, ry: 11, fill: "#BFF3EA", stroke: "#4CB8A8" });
+txt(lx + 72, ly + 76, "Atributo  ·  subrayado = identificador", { "text-anchor": "start", "font-size": 11.5 });
+txt(lx + 16, ly + 103, "(mín,máx) junto a cada entidad = cuántas veces participa", { "text-anchor": "start", "font-size": 11.5 });
+txt(lx + 16, ly + 125, "PERSONAL = bibliotecarios y administradores", { "text-anchor": "start", "font-size": 11.5 });
+</script>
+</body></html>
