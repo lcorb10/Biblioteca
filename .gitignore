@@ -16,3 +16,6 @@ Thumbs.db
 
 # Credenciales de la base en la nube
 config.nube.toml
+
+# Contexto privado para Claude
+CONTEXTO_CLAUDE.md
