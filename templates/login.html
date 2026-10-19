@@ -45,6 +45,9 @@
         <button class="btn pri" type="submit"><i data-lucide="arrow-right-to-line"></i>Entrar</button>
       </form>
 
+      {% if modo != 'personal' %}
+      <p class="signup">¿Primera vez? <a href="{{ url_for('registro') }}">Crea tu cuenta de lector</a></p>
+      {% endif %}
       <div class="demo">
         <b>Cuentas de prueba</b><br>
         {% if modo == 'personal' %}Usuario <code>admin</code> · clave <code>admin123</code>

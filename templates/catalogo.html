@@ -35,7 +35,7 @@
   {% for l in libros %}
   {% set cat = (l.categorias or '').split(', ')[0] %}
   <article class="book" style="--i: {{ loop.index0 }}">
-    <div class="cover-wrap">
+    <a class="cover-wrap" href="{{ url_for('libro_detalle', isbn=l.isbn) }}" aria-label="Ver detalle de {{ l.titulo }}">
       <div class="cover" style="--c: {{ cat|color }}">
         <div>
           <div class="c-title">{{ l.titulo }}</div>
@@ -45,7 +45,7 @@
         <div class="c-foot"><span>{{ l.editorial or '' }}</span><span>{{ l.anio or '' }}</span></div>
         {{ real_cover(l.isbn) }}
       </div>
-    </div>
+    </a>
     <div class="meta">
       {% set total = l.total_ejemplares %}
       <span class="avail {{ 'none' if not l.disponibles }}">

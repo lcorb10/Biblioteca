@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta{% endblock %}
+{% block body %}
+<div class="login">
+  <section class="login-art" aria-hidden="true">
+    <div class="glow"></div>
+    <div>
+      <div class="brand"><i><svg data-lucide="library-big"></svg></i>Biblioteca Universitaria</div>
+      <h1>Tu carné, <em>en un minuto</em>.</h1>
+      <p>Regístrate con tus datos de la universidad y empieza a pedir libros del catálogo. Un bibliotecario aprobará cada préstamo.</p>
+    </div>
+    <ol class="steps">
+      <li><b>1</b>Crea tu cuenta con tu código e identificación.</li>
+      <li><b>2</b>Busca un libro disponible y solicítalo.</li>
+      <li><b>3</b>Recógelo cuando el bibliotecario lo apruebe.</li>
+    </ol>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-box">
+      <a class="crumb" href="{{ url_for('login') }}"><i data-lucide="chevron-left"></i>Volver a ingresar</a>
+      <h2>Crear cuenta</h2>
+      <p>Para estudiantes y docentes.</p>
+
+      {% with errs = get_flashed_messages(category_filter=['error']) %}
+      {% for e in errs %}<div class="inline-alert" role="alert"><i data-lucide="circle-alert"></i>{{ e }}</div>{% endfor %}
+      {% endwith %}
+
+      <form method="post" class="form" onsubmit="try{sessionStorage.setItem('bib-intro','1')}catch(e){}">
+        <div class="field"><label for="nombres">Nombres completos</label>
+          <input type="text" id="nombres" name="nombres" value="{{ u.nombres or '' }}" required maxlength="120" autocomplete="name" autofocus></div>
+        <div class="row">
+          <div class="field"><label for="codigo">Código</label>
+            <input type="text" id="codigo" name="codigo" value="{{ u.codigo or '' }}" required maxlength="20" autocomplete="username" placeholder="U005"></div>
+          <div class="field"><label for="identificacion">Identificación</label>
+            <input type="text" id="identificacion" name="identificacion" value="{{ u.identificacion or '' }}" required maxlength="20" inputmode="numeric"></div>
+        </div>
+        <div class="field"><label for="correo">Correo institucional</label>
+          <input type="email" id="correo" name="correo" value="{{ u.correo or '' }}" required maxlength="120" autocomplete="email" placeholder="nombre@uni.edu.co"></div>
+        <div class="row">
+          <div class="field"><span class="label">Soy</span>
+            <div class="seg" style="display:flex">
+              {% for r in ['estudiante', 'docente'] %}
+              <input type="radio" id="rol-{{ r }}" name="rol" value="{{ r }}" {{ 'checked' if u.rol == r }}><label for="rol-{{ r }}" style="flex:1;text-align:center">{{ r|capitalize }}</label>
+              {% endfor %}
+            </div></div>
+          <div class="field"><label for="carrera">Carrera <span class="opt">(opcional)</span></label>
+            <input type="text" id="carrera" name="carrera" value="{{ u.carrera or '' }}" maxlength="100"></div>
+        </div>
+        <p class="hint" style="font-size:12.5px;color:var(--ink-3)">Para ingresar después usarás tu <b>código</b> y tu <b>número de identificación</b>.</p>
+        <button class="btn pri" type="submit"><i data-lucide="user-plus"></i>Crear mi cuenta</button>
+      </form>
+    </div>
+  </section>
+</div>
+<script>try { sessionStorage.removeItem("bib-intro"); } catch (e) {}</script>
+{% endblock %}

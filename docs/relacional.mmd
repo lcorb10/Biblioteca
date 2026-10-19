@@ -1,0 +1,92 @@
+erDiagram
+    editorial ||--o{ libro : "id_editorial"
+    libro ||--o{ libro_autor : "isbn"
+    autor ||--o{ libro_autor : "id_autor"
+    libro ||--o{ libro_categoria : "isbn"
+    categoria ||--o{ libro_categoria : "id_categoria"
+    libro ||--o{ ejemplar : "isbn"
+    usuario ||--o{ prestamo : "id_usuario"
+    libro ||--o{ prestamo : "isbn"
+    ejemplar |o--o{ prestamo : "id_ejemplar"
+    personal |o--o{ prestamo : "id_personal"
+    prestamo ||--o| devolucion : "id_prestamo"
+    personal |o--o{ devolucion : "id_personal"
+
+    configuracion {
+        VARCHAR(50) clave PK
+        VARCHAR(100) valor
+        VARCHAR(200) descripcion
+    }
+    editorial {
+        INT id_editorial PK
+        VARCHAR(100) nombre UK
+    }
+    autor {
+        INT id_autor PK
+        VARCHAR(120) nombre UK
+    }
+    categoria {
+        INT id_categoria PK
+        VARCHAR(80) nombre UK
+    }
+    libro {
+        VARCHAR(20) isbn PK
+        VARCHAR(200) titulo
+        INT id_editorial FK
+        SMALLINT anio
+        TEXT descripcion
+    }
+    libro_autor {
+        VARCHAR(20) isbn PK, FK
+        INT id_autor PK, FK
+    }
+    libro_categoria {
+        VARCHAR(20) isbn PK, FK
+        INT id_categoria PK, FK
+    }
+    ejemplar {
+        INT id_ejemplar PK
+        VARCHAR(30) codigo_barras UK
+        VARCHAR(20) isbn FK
+        VARCHAR(80) ubicacion
+        ENUM estado
+    }
+    usuario {
+        INT id_usuario PK
+        VARCHAR(20) codigo UK
+        VARCHAR(20) identificacion UK
+        VARCHAR(120) nombres
+        VARCHAR(120) correo UK
+        ENUM rol
+        VARCHAR(100) carrera "NULL"
+        ENUM estado
+    }
+    personal {
+        INT id_personal PK
+        VARCHAR(50) login UK
+        VARCHAR(200) clave_hash
+        VARCHAR(100) nombres
+        ENUM rol
+    }
+    prestamo {
+        INT id_prestamo PK
+        INT id_usuario FK
+        VARCHAR(20) isbn FK
+        INT id_ejemplar FK "NULL hasta aprobar"
+        INT id_personal FK "NULL hasta aprobar"
+        DATETIME fecha_solicitud
+        DATE fecha_prestamo
+        DATE fecha_vencimiento
+        DATE fecha_devolucion
+        ENUM estado
+    }
+    devolucion {
+        INT id_devolucion PK
+        INT id_prestamo FK, UK
+        INT id_personal FK
+        DATE fecha_devolucion
+        INT dias_retraso
+        DECIMAL multa "(10,2)"
+        ENUM condicion
+        VARCHAR(300) observaciones
+    }

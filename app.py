@@ -1,16 +1,51 @@
 """Biblioteca Universitaria — aplicación Flask (Laboratorio 01, Bases de Datos)."""
+import csv
+import io
 import os
 import zlib
 from datetime import date, datetime, timedelta
 from functools import wraps
 
 import pymysql
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from flask import (Flask, Response, abort, flash, g, has_request_context, redirect, render_template, request,
+                   session, url_for)
 
 import db
 
 app = Flask(__name__)
 app.secret_key = db.CONFIG.get("flask", {}).get("secret_key") or os.urandom(24)
+
+
+# ======================================================
+# Panel "Ver SQL": guarda las sentencias que ejecuta cada petición
+# ======================================================
+def _guardar_sql(texto):
+    if has_request_context() and "sql" in g and not g.get("sql_mute"):
+        g.sql.append(texto)
+
+
+db.on_sql(_guardar_sql)
+
+
+@app.before_request
+def _sql_inicio():
+    g.sql = []
+
+
+@app.after_request
+def _sql_accion(resp):
+    # Las acciones (POST) redirigen: se guardan para mostrarlas en la página siguiente
+    if request.method == "POST" and g.get("sql"):
+        sentencias, total = [], 0
+        for s in g.sql:
+            s = s if len(s) <= 700 else s[:700] + " …"
+            total += len(s)
+            if total > 2600:
+                sentencias.append("-- … (más sentencias omitidas)")
+                break
+            sentencias.append(s)
+        session["sql_prev"] = {"ruta": request.path, "sql": sentencias}
+    return resp
 
 
 # ======================================================
@@ -60,6 +95,13 @@ def f_alto(clave):
 def f_iniciales(txt):
     palabras = [p for p in (txt or "").split() if p[:1].isalnum() and len(p) > 2] or (txt or "?").split()
     return "".join(p[0] for p in palabras[:2]).upper()
+
+
+@app.template_filter("barras")
+def f_barras(codigo):
+    """Anchos de barra (decorativos) derivados del código del ejemplar."""
+    h = zlib.crc32(str(codigo).encode())
+    return [1 + (h >> (i % 30) ^ i * 7) % 3 for i in range(46)]
 
 
 @app.template_filter("hace")
@@ -135,7 +177,7 @@ SECCION = {
     "libro_nuevo": "libros", "libro_editar": "libros",
     "ejemplar_nuevo": "ejemplares", "ejemplar_editar": "ejemplares",
     "usuario_nuevo": "usuarios", "usuario_editar": "usuarios", "usuario_historial": "usuarios",
-    "prestamo_nuevo": "prestamos",
+    "prestamo_nuevo": "prestamos", "prestamo_comprobante": "prestamos", "libro_detalle": "catalogo",
 }
 
 
@@ -144,6 +186,8 @@ def contexto():
     a = auth()
     ctx = {"auth": a, "hoy": date.today(), "hoy_largo": hoy_largo(), "pendientes": 0,
            "seccion": SECCION.get(request.endpoint, request.endpoint)}
+    ctx["sql_prev"] = session.pop("sql_prev", None) if request.method == "GET" else None
+    g.sql_mute = True  # las consultas de menú y buscador no son parte de la página
     if a:
         ctx["nav"] = NAV_PERSONAL if a["tipo"] == "personal" else NAV_USUARIO
         try:  # datos para el buscador rápido (Ctrl+K)
@@ -157,6 +201,7 @@ def contexto():
                 ctx["pendientes"] = db.one("SELECT COUNT(*) AS n FROM prestamo WHERE estado='solicitado'")["n"]
             except pymysql.MySQLError:
                 pass
+    g.sql_mute = False
     return ctx
 
 
@@ -207,6 +252,27 @@ def login():
     return render_template("login.html", modo=modo, libros=libros)
 
 
+@app.route("/registro", methods=["GET", "POST"])
+def registro():
+    """Registro de lectores (estudiantes y docentes) desde la pantalla de inicio de sesión."""
+    if auth():
+        return redirect(url_for("inicio"))
+    u = {"rol": "estudiante"}
+    if request.method == "POST":
+        u = form_usuario()
+        u["estado"] = "activo"
+        if usuario_valido(u):
+            try:
+                db.crear_usuario(u)
+                session.clear()
+                session["auth"] = db.autenticar_usuario(u["codigo"], u["identificacion"])
+                flash(f"¡Bienvenido a la biblioteca, {u['nombres'].split()[0]}! Ya puedes solicitar libros.", "ok")
+                return redirect(url_for("catalogo"))
+            except pymysql.MySQLError as e:
+                flash(db.mensaje_error(e), "error")
+    return render_template("registro.html", u=u)
+
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -237,6 +303,15 @@ def catalogo():
     f["disp"] = request.args.get("disp") == "1"
     libros = db.buscar_libros(f["titulo"], f["autor"], f["isbn"], f["categoria"], f["disp"])
     return render_template("catalogo.html", libros=libros, f=f, categorias=db.nombres("categoria"))
+
+
+@app.route("/libros/<isbn>")
+@requiere()
+def libro_detalle(isbn):
+    libro = db.get_libro(isbn) or abort(404)
+    historial = db.prestamos_de_libro(isbn) if auth()["tipo"] == "personal" else []
+    return render_template("libro_detalle.html", l=libro, ejemplares=db.ejemplares_de_libro(isbn),
+                           historial=historial)
 
 
 @app.post("/catalogo/solicitar")
@@ -520,6 +595,17 @@ def prestamo_rechazar(id_prestamo):
     return redirect(url_for("prestamos"))
 
 
+@app.route("/prestamos/<int:id_prestamo>/comprobante")
+@requiere()
+def prestamo_comprobante(id_prestamo):
+    p = db.get_prestamo_detalle(id_prestamo) or abort(404)
+    if auth()["tipo"] == "usuario" and p["id_usuario"] != auth()["id"]:
+        abort(403)
+    if p["estado"] not in ("activo", "devuelto"):
+        abort(404)
+    return render_template("comprobante.html", p=p, tarifa=db.tarifa_dia())
+
+
 @app.route("/prestamos/nuevo", methods=["GET", "POST"])
 @requiere("personal")
 def prestamo_nuevo():
@@ -580,10 +666,48 @@ def reportes():
     ini = parse_fecha(request.args.get("desde"), date.today() - timedelta(days=90))
     fin = parse_fecha(request.args.get("hasta"), date.today())
     activos = db.prestamos_activos()
+    por_dia = db.prestamos_por_dia(26)
+    # mapa de calor: columnas = semanas, filas = días (lunes a domingo)
+    inicio_mapa = date.today() - timedelta(days=date.today().weekday() + 25 * 7)
+    semanas = [[(d, por_dia.get(d, 0)) for d in (inicio_mapa + timedelta(days=w * 7 + i) for i in range(7))]
+               for w in range(26)]
     return render_template("reportes.html", activos=activos, ini=ini, fin=fin,
                            vencidos=sum(1 for p in activos if p["dias_retraso"] > 0),
-                           top_libros=db.libros_mas_prestados(ini, fin), top_usuarios=db.usuarios_mas_prestamos(),
-                           inv=db.inventario_por_estado(), libros=db.estante())
+                           top_libros=db.libros_mas_prestados(ini, fin), top_usuarios=db.usuarios_mas_prestamos(ini, fin),
+                           inv=db.inventario_por_estado(), libros=db.estante(), por_mes=db.prestamos_por_mes(12),
+                           semanas=semanas, max_dia=max(por_dia.values(), default=0), meses_nombres=MESES)
+
+
+@app.route("/reportes/<tipo>.csv")
+@requiere("personal")
+def reporte_csv(tipo):
+    """Exporta un reporte a CSV (separado por punto y coma, se abre directo en Excel)."""
+    ini = parse_fecha(request.args.get("desde"), date.today() - timedelta(days=90))
+    fin = parse_fecha(request.args.get("hasta"), date.today())
+    if tipo == "activos":
+        cab = ["Préstamo", "Libro", "ISBN", "Ejemplar", "Lector", "Código", "Prestado", "Vence", "Días de retraso",
+               "Multa estimada"]
+        filas = [[p["id_prestamo"], p["titulo"], p["isbn"], p["codigo_barras"], p["usuario"], p["codigo"],
+                  p["fecha_prestamo"], p["fecha_vencimiento"], p["dias_retraso"], float(p["multa_estimada"])]
+                 for p in db.prestamos_activos()]
+    elif tipo == "libros-mas-prestados":
+        cab = ["Libro", "ISBN", "Préstamos"]
+        filas = [[r["titulo"], r["isbn"], r["prestamos"]] for r in db.libros_mas_prestados(ini, fin, 100)]
+    elif tipo == "usuarios-mas-prestamos":
+        cab = ["Código", "Nombres", "Rol", "Préstamos"]
+        filas = [[r["codigo"], r["nombres"], r["rol"], r["prestamos"]] for r in db.usuarios_mas_prestamos(ini, fin, 100)]
+    elif tipo == "inventario":
+        cab = ["Código de barras", "Libro", "ISBN", "Ubicación", "Estado"]
+        filas = [[e["codigo_barras"], e["titulo"], e["isbn"], e["ubicacion"], e["estado"]] for e in db.listar_ejemplares()]
+    else:
+        abort(404)
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(cab)
+    w.writerows(filas)
+    nombre = f"{tipo}_{date.today().isoformat()}.csv"
+    return Response("﻿" + buf.getvalue(), mimetype="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename={nombre}"})
 
 
 if __name__ == "__main__":

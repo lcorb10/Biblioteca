@@ -1,4 +1,20 @@
-# Modelo Entidad-Relación (pegar en https://mermaid.live para exportar PNG/PDF)
+# Modelos de la base de datos
+
+## Diagrama Entidad–Relación (MER)
+
+![MER](docs/MER.png)
+
+Fuente editable: [docs/mer.mmd](docs/mer.mmd) (Mermaid; se puede abrir en https://mermaid.live).
+
+## Diagrama Relacional
+
+![Modelo relacional](docs/Modelo_Relacional.png)
+
+Fuente editable: [docs/relacional.mmd](docs/relacional.mmd).
+
+---
+
+## Versión en texto del MER
 
 ```mermaid
 erDiagram

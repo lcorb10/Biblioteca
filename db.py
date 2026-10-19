@@ -4,6 +4,7 @@ import hmac
 import os
 import tomllib
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pymysql
@@ -12,7 +13,15 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 def load_config():
-    """Lee config.toml (o, si no existe, el antiguo .streamlit/secrets.toml)."""
+    """Lee variables de entorno (para el despliegue en la nube) o config.toml (en local)."""
+    if os.environ.get("MYSQL_HOST"):
+        return {
+            "mysql": {"host": os.environ["MYSQL_HOST"], "port": os.environ.get("MYSQL_PORT", 3306),
+                      "user": os.environ["MYSQL_USER"], "password": os.environ["MYSQL_PASSWORD"],
+                      "database": os.environ.get("MYSQL_DATABASE", "biblioteca"),
+                      "ssl": os.environ.get("MYSQL_SSL", "") == "1"},
+            "flask": {"secret_key": os.environ.get("SECRET_KEY")},
+        }
     for p in (BASE_DIR / "config.toml", BASE_DIR / ".streamlit" / "secrets.toml"):
         if p.exists():
             with open(p, "rb") as f:
@@ -37,13 +46,51 @@ def get_conn():
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
+        ssl={"ssl": {}} if cfg.get("ssl") else None,
     )
+
+
+# Registro de las sentencias SQL ejecutadas (lo usa el panel "Ver SQL" de la interfaz)
+_oyentes = []
+
+
+def on_sql(fn):
+    _oyentes.append(fn)
+
+
+def _emitir(texto):
+    for fn in _oyentes:
+        fn(texto)
+
+
+def _log(cur, sql, params):
+    if _oyentes:
+        try:
+            texto = cur.mogrify(sql, params or ())
+        except Exception:
+            texto = sql
+        _emitir(" ".join(texto.split()))
+
+
+class _CursorLog:
+    """Envuelve el cursor para registrar cada execute dentro de una transacción."""
+
+    def __init__(self, cur):
+        self._cur = cur
+
+    def execute(self, sql, params=None):
+        _log(self._cur, sql, params)
+        return self._cur.execute(sql, params or ())
+
+    def __getattr__(self, nombre):
+        return getattr(self._cur, nombre)
 
 
 def query(sql, params=None):
     conn = get_conn()
     try:
         with conn.cursor() as cur:
+            _log(cur, sql, params)
             cur.execute(sql, params or ())
             return cur.fetchall()
     finally:
@@ -59,12 +106,15 @@ def run_tx(fn):
     """Ejecuta fn(cursor) dentro de una transacción (commit / rollback)."""
     conn = get_conn()
     try:
+        _emitir("START TRANSACTION;")
         with conn.cursor() as cur:
-            res = fn(cur)
+            res = fn(_CursorLog(cur))
         conn.commit()
+        _emitir("COMMIT;")
         return res
     except Exception:
         conn.rollback()
+        _emitir("ROLLBACK;")
         raise
     finally:
         conn.close()
@@ -93,7 +143,7 @@ def cfg_val(clave, default):
 
 
 def tarifa_dia():
-    return float(cfg_val("tarifa_multa_dia", 2000))
+    return Decimal(cfg_val("tarifa_multa_dia", 2000))
 
 
 def dias_prestamo():
@@ -422,7 +472,7 @@ def registrar_devolucion(id_prestamo, id_personal, f_dev, condicion, obs):
 
 
 def ultimas_devoluciones(limit=15):
-    return query("""SELECT d.id_devolucion, l.titulo, u.nombres AS usuario, ej.codigo_barras, d.fecha_devolucion,
+    return query("""SELECT d.id_devolucion, d.id_prestamo, l.titulo, u.nombres AS usuario, ej.codigo_barras, d.fecha_devolucion,
                            d.dias_retraso, d.multa, d.condicion, d.observaciones
                     FROM devolucion d JOIN prestamo p ON p.id_prestamo=d.id_prestamo
                     JOIN libro l ON l.isbn=p.isbn JOIN usuario u ON u.id_usuario=p.id_usuario
@@ -440,12 +490,67 @@ def libros_mas_prestados(ini, fin, limit=10):
                     GROUP BY l.isbn, l.titulo ORDER BY prestamos DESC, l.titulo LIMIT %s""", (ini, fin, limit))
 
 
-def usuarios_mas_prestamos(limit=10):
+def usuarios_mas_prestamos(ini, fin, limit=10):
     return query("""SELECT u.codigo, u.nombres, u.rol, COUNT(*) AS prestamos
                     FROM prestamo p JOIN usuario u ON u.id_usuario=p.id_usuario
-                    WHERE p.estado IN ('activo','devuelto')
+                    WHERE p.estado IN ('activo','devuelto') AND p.fecha_prestamo BETWEEN %s AND %s
                     GROUP BY u.id_usuario, u.codigo, u.nombres, u.rol
-                    ORDER BY prestamos DESC, u.nombres LIMIT %s""", (limit,))
+                    ORDER BY prestamos DESC, u.nombres LIMIT %s""", (ini, fin, limit))
+
+
+def prestamos_por_mes(meses=12):
+    """Cantidad de préstamos por mes (últimos N meses, incluye los meses sin préstamos)."""
+    rows = query("""SELECT DATE_FORMAT(fecha_prestamo, '%%Y-%%m') AS mes, COUNT(*) AS prestamos
+                    FROM prestamo WHERE estado IN ('activo','devuelto')
+                      AND fecha_prestamo >= DATE_SUB(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL %s MONTH)
+                    GROUP BY mes ORDER BY mes""", (meses - 1,))
+    cuenta = {r["mes"]: r["prestamos"] for r in rows}
+    hoy = date.today()
+    salida = []
+    for i in range(meses - 1, -1, -1):
+        y, m = divmod(hoy.year * 12 + hoy.month - 1 - i, 12)
+        clave = f"{y}-{m + 1:02d}"
+        salida.append({"mes": clave, "anio": y, "num": m + 1, "prestamos": cuenta.get(clave, 0)})
+    return salida
+
+
+def prestamos_por_dia(semanas=26):
+    """Préstamos por día de las últimas N semanas (para el mapa de calor)."""
+    rows = query("""SELECT fecha_prestamo AS dia, COUNT(*) AS n FROM prestamo
+                    WHERE estado IN ('activo','devuelto')
+                      AND fecha_prestamo >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                    GROUP BY fecha_prestamo""", (semanas * 7,))
+    return {r["dia"]: r["n"] for r in rows}
+
+
+def prestamos_de_libro(isbn, limit=30):
+    return query("""SELECT p.id_prestamo, p.estado, p.fecha_solicitud, p.fecha_prestamo, p.fecha_vencimiento,
+                           p.fecha_devolucion, u.nombres, u.codigo, ej.codigo_barras, d.multa, d.condicion
+                    FROM prestamo p JOIN usuario u ON u.id_usuario=p.id_usuario
+                    LEFT JOIN ejemplar ej ON ej.id_ejemplar=p.id_ejemplar
+                    LEFT JOIN devolucion d ON d.id_prestamo=p.id_prestamo
+                    WHERE p.isbn=%s ORDER BY p.fecha_solicitud DESC LIMIT %s""", (isbn, limit))
+
+
+def ejemplares_de_libro(isbn):
+    return query("SELECT * FROM ejemplar WHERE isbn=%s ORDER BY codigo_barras", (isbn,))
+
+
+def get_prestamo_detalle(id_prestamo):
+    """Todo lo necesario para imprimir el comprobante de un préstamo o devolución."""
+    return one("""SELECT p.*, u.nombres, u.codigo, u.identificacion, u.correo, u.rol, u.carrera,
+                         l.titulo, ej.codigo_barras, ej.ubicacion, pe.nombres AS aprobado_por,
+                         d.fecha_devolucion AS f_dev, d.dias_retraso, d.multa, d.condicion, d.observaciones,
+                         pd.nombres AS recibido_por,
+                         (SELECT GROUP_CONCAT(a.nombre ORDER BY a.nombre SEPARATOR ', ') FROM libro_autor la
+                            JOIN autor a ON a.id_autor=la.id_autor WHERE la.isbn=l.isbn) AS autores
+                  FROM prestamo p JOIN usuario u ON u.id_usuario=p.id_usuario
+                  JOIN libro l ON l.isbn=p.isbn
+                  LEFT JOIN ejemplar ej ON ej.id_ejemplar=p.id_ejemplar
+                  LEFT JOIN personal pe ON pe.id_personal=p.id_personal
+                  LEFT JOIN devolucion d ON d.id_prestamo=p.id_prestamo
+                  LEFT JOIN personal pd ON pd.id_personal=d.id_personal
+                  WHERE p.id_prestamo=%s""", (id_prestamo,))
 
 
 def inventario_por_estado():

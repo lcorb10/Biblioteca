@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "_macros.html" import shelf, mini_cover, estado, empty, legend %}
 {% block title %}Reportes{% endblock %}
+{% macro csv_btn(tipo) -%}
+<a class="btn sm ghost" href="{{ url_for('reporte_csv', tipo=tipo, desde=ini.isoformat(), hasta=fin.isoformat()) }}" download><i data-lucide="file-spreadsheet"></i>CSV</a>
+{%- endmacro %}
 {% block content %}
 <div class="head">
   <div><h1>Reportes</h1><p class="sub">Lo que pasa en la biblioteca, al día de hoy.</p></div>
@@ -9,6 +12,7 @@
 
 <nav class="subnav" aria-label="Secciones">
   <a href="#activos">Activos y vencidos</a>
+  <a href="#tendencia">Tendencia</a>
   <a href="#mas-prestados">Libros más prestados</a>
   <a href="#usuarios">Usuarios con más préstamos</a>
   <a href="#inventario">Inventario por estado</a>
@@ -17,7 +21,7 @@
 <section id="activos" class="table-wrap" style="margin-bottom:22px">
   <header>
     <h2>Préstamos activos y vencidos</h2>
-    <div style="display:flex;gap:8px">{{ estado('vigente', (activos|length) ~ ' activos') }}{{ estado('bad', vencidos ~ ' vencidos') }}</div>
+    <div style="display:flex;gap:8px;align-items:center">{{ estado('vigente', (activos|length) ~ ' activos') }}{{ estado('bad', vencidos ~ ' vencidos') }}{{ csv_btn('activos') }}</div>
   </header>
   {% if activos %}
   <table>
@@ -25,7 +29,7 @@
     <tbody>
     {% for p in activos %}
     <tr>
-      <td><div class="cell-book">{{ mini_cover(p.titulo, p.categoria, p.isbn) }}<div><div class="t">{{ p.titulo }}</div><div class="m code">{{ p.codigo_barras }}</div></div></div></td>
+      <td><div class="cell-book">{{ mini_cover(p.titulo, p.categoria, p.isbn) }}<div><a class="t link" href="{{ url_for('libro_detalle', isbn=p.isbn) }}">{{ p.titulo }}</a><div class="m code">{{ p.codigo_barras }}</div></div></div></td>
       <td>{{ p.usuario }}</td>
       <td class="code">{{ p.fecha_prestamo|fecha }}</td>
       <td class="code">{{ p.fecha_vencimiento|fecha }}</td>
@@ -42,22 +46,58 @@
   {% else %}{{ empty('book-check', 'No hay préstamos activos') }}{% endif %}
 </section>
 
+{# ---------- Tendencia: préstamos por mes + mapa de calor ---------- #}
+{% set mx_mes = (por_mes|map(attribute='prestamos')|max) or 1 %}
+{% set total_anio = por_mes|map(attribute='prestamos')|sum %}
+<section id="tendencia" class="card" style="margin-bottom:22px">
+  <header>
+    <div><h2>Préstamos por mes</h2><p>Últimos 12 meses · {{ total_anio }} préstamo{{ 's' if total_anio != 1 }}</p></div>
+  </header>
+  <div class="cols-chart" role="img" aria-label="Préstamos por mes en los últimos 12 meses">
+    {% for m in por_mes %}
+    <div class="col {{ 'peak' if m.prestamos == mx_mes and m.prestamos }} {{ 'now' if loop.last }}">
+      <span class="col-val">{{ m.prestamos if m.prestamos else '' }}</span>
+      <div class="col-bar" style="--h: {{ (m.prestamos / mx_mes * 100)|round(1) }}%; --i: {{ loop.index0 }}"></div>
+      <span class="col-lab">{{ meses_nombres[m.num - 1] }}{% if m.num == 1 or loop.first %}<small>{{ m.anio }}</small>{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="heat-wrap">
+    <div class="heat-head"><h3>Actividad diaria</h3><p class="muted small">Cada cuadro es un día de las últimas 26 semanas; más oscuro, más préstamos.</p></div>
+    <div class="heat">
+      <div class="heat-days" aria-hidden="true"><span>lun</span><span></span><span>mié</span><span></span><span>vie</span><span></span><span>dom</span></div>
+      <div class="heat-grid">
+        {% for semana in semanas %}{% set wi = loop.index0 %}
+        <div class="heat-col">
+          {% for d, n in semana %}
+          {% set lvl = 0 if not n else (1 + (n * 3 // (max_dia or 1)))|int %}
+          <i class="lv{{ [lvl, 4]|min }} {{ 'future' if d > hoy }}" style="--i: {{ wi + loop.index0 }}" title="{{ d|fecha }}: {{ n }} préstamo{{ 's' if n != 1 }}"></i>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="heat-legend" aria-hidden="true">Menos <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i> Más</div>
+  </div>
+</section>
+
+<form method="get" class="period card">
+  <div><h3>Periodo de los rankings</h3><p class="muted small">Del {{ ini|fecha }} al {{ fin|fecha }}</p></div>
+  <div class="field"><label for="desde">Desde</label><input type="date" id="desde" name="desde" value="{{ ini.isoformat() }}"></div>
+  <div class="field"><label for="hasta">Hasta</label><input type="date" id="hasta" name="hasta" value="{{ fin.isoformat() }}"></div>
+  <button class="btn" type="submit"><i data-lucide="filter"></i>Aplicar</button>
+</form>
+
 <div class="grid-2 even" style="margin-bottom:22px">
   <section id="mas-prestados" class="card">
-    <header>
-      <div><h2>Libros más prestados</h2><p>Del {{ ini|fecha }} al {{ fin|fecha }}</p></div>
-    </header>
-    <form method="get" class="form" style="grid-template-columns:1fr 1fr auto;align-items:end;margin-bottom:18px;display:grid;gap:10px">
-      <div class="field"><label for="desde">Desde</label><input type="date" id="desde" name="desde" value="{{ ini.isoformat() }}"></div>
-      <div class="field"><label for="hasta">Hasta</label><input type="date" id="hasta" name="hasta" value="{{ fin.isoformat() }}"></div>
-      <button class="btn" type="submit"><i data-lucide="filter"></i>Ver</button>
-    </form>
+    <header><div><h2>Libros más prestados</h2><p>En el periodo elegido</p></div>{{ csv_btn('libros-mas-prestados') }}</header>
     {% if top_libros %}
     {% set mx = top_libros[0].prestamos %}
     <div class="hbars">
       {% for b in top_libros %}
       <div class="hbar">
-        <div class="lab">{{ b.titulo }}<small class="code">{{ b.isbn }}</small></div>
+        <a class="lab link" href="{{ url_for('libro_detalle', isbn=b.isbn) }}">{{ b.titulo }}<small class="code">{{ b.isbn }}</small></a>
         <div class="track"><div class="fill" style="--w: {{ (b.prestamos / mx * 100)|round(1) }}%; --c: {{ (b.categoria or b.titulo)|color }}; --i: {{ loop.index0 }}"></div></div>
         <div class="val">{{ b.prestamos }}</div>
       </div>
@@ -67,7 +107,7 @@
   </section>
 
   <section id="usuarios" class="card">
-    <header><div><h2>Usuarios con más préstamos</h2><p>Préstamos aprobados de todos los tiempos</p></div></header>
+    <header><div><h2>Usuarios con más préstamos</h2><p>En el periodo elegido</p></div>{{ csv_btn('usuarios-mas-prestamos') }}</header>
     {% if top_usuarios %}
     {% set mx = top_usuarios[0].prestamos %}
     <div class="hbars">
@@ -80,14 +120,14 @@
       </div>
       {% endfor %}
     </div>
-    {% else %}{{ empty('users', 'Sin datos todavía') }}{% endif %}
+    {% else %}{{ empty('users', 'Sin préstamos en este periodo') }}{% endif %}
   </section>
 </div>
 
 {% set total = inv.disponible + inv.prestado + inv.perdido %}
 <section id="inventario" class="card shelf-card">
   <div>
-    <h2>Inventario por estado</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Inventario por estado</h2>{{ csv_btn('inventario') }}</div>
     <p class="muted small">{{ total }} ejemplares en total.</p>
     {% if total %}
     <div class="inv-bar" role="img" aria-label="{{ inv.disponible }} disponibles, {{ inv.prestado }} prestados, {{ inv.perdido }} perdidos">

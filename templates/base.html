@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script>
     try {
+      var t = localStorage.getItem("bib-tema");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+    try {
       if (sessionStorage.getItem("bib-intro") && !matchMedia("(prefers-reduced-motion: reduce)").matches)
         document.documentElement.classList.add("intro-playing");
     } catch (e) {}
@@ -34,6 +38,8 @@
       {% endfor %}
     </nav>
     <div class="me">
+      <button class="theme-btn" type="button" data-theme-toggle aria-label="Cambiar a modo oscuro" title="Modo claro / oscuro">
+        <i data-lucide="moon" class="i-moon"></i><i data-lucide="sun" class="i-sun"></i></button>
       <div class="avatar" title="{{ auth.nombre }} · {{ auth.rol }}">{{ auth.nombre|iniciales }}</div>
       <a href="{{ url_for('logout') }}" aria-label="Cerrar sesión" title="Cerrar sesión"><i data-lucide="log-out"></i></a>
     </div>
@@ -67,7 +73,7 @@
 {% endblock %}
 
 {% with msgs = get_flashed_messages(with_categories=true) %}
-{% if msgs and request.endpoint != 'login' %}
+{% if msgs and request.endpoint not in ('login', 'registro') %}
 <div class="toasts" role="status" aria-live="polite">
   {% for cat, msg in msgs %}
   <div class="toast {{ cat }}">
@@ -79,6 +85,28 @@
 </div>
 {% endif %}
 {% endwith %}
+
+{% if auth and request.endpoint not in ('login', 'registro', 'prestamo_comprobante') %}
+{% set q_pag = g.sql or [] %}
+{% set q_prev = sql_prev.sql if sql_prev else [] %}
+<button class="sql-fab" type="button" data-sql-open aria-controls="sql-panel">
+  <i data-lucide="database"></i>Ver SQL<span class="sql-count">{{ q_pag|length + q_prev|length }}</span></button>
+<aside class="sql-panel" id="sql-panel" aria-label="Consultas SQL ejecutadas" hidden>
+  <header>
+    <div><h2>SQL ejecutado</h2><p>Sentencias reales enviadas a MySQL para mostrar esta pantalla.</p></div>
+    <button class="btn icon ghost" type="button" data-sql-close aria-label="Cerrar"><i data-lucide="x"></i></button>
+  </header>
+  <div class="sql-body">
+    {% if q_prev %}
+    <h3><i data-lucide="zap"></i>Última acción <span class="code">POST {{ sql_prev.ruta }}</span></h3>
+    {% for q in q_prev %}<div class="sql-stmt"><pre><code>{{ q }}</code></pre><button type="button" class="sql-copy" aria-label="Copiar"><i data-lucide="copy"></i></button></div>{% endfor %}
+    {% endif %}
+    <h3><i data-lucide="eye"></i>Esta página <span class="code">GET {{ request.path }}</span></h3>
+    {% for q in q_pag %}<div class="sql-stmt"><pre><code>{{ q }}</code></pre><button type="button" class="sql-copy" aria-label="Copiar"><i data-lucide="copy"></i></button></div>
+    {% else %}<p class="muted small">Esta pantalla no necesitó consultas.</p>{% endfor %}
+  </div>
+</aside>
+{% endif %}
 
 {% if auth %}
 {% set staff = auth.tipo == 'personal' %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado, empty, real_cover %}
+{% block title %}{{ l.titulo }}{% endblock %}
+{% block content %}
+{% set cat = (l.categorias or '').split(', ')[0] %}
+<a class="crumb" href="{{ request.referrer if request.referrer and '/libros/' not in request.referrer else url_for('catalogo') }}"><i data-lucide="chevron-left"></i>Volver</a>
+
+<section class="detail">
+  <div class="detail-cover cover-wrap">
+    <div class="cover" style="--c: {{ cat|color }}">
+      <div>
+        <div class="c-title">{{ l.titulo }}</div>
+        <div class="c-rule"></div>
+        <div class="c-author">{{ l.autores or 'Autor desconocido' }}</div>
+      </div>
+      <div class="c-foot"><span>{{ l.editorial or '' }}</span><span>{{ l.anio or '' }}</span></div>
+      {{ real_cover(l.isbn) }}
+    </div>
+  </div>
+
+  <div class="detail-info">
+    {% if l.categorias %}<div class="chips" style="margin-bottom:12px">{% for c in l.categorias.split(', ') %}<a class="chip" href="{{ url_for('catalogo', categoria=c) }}" style="text-decoration:none">{{ c }}</a>{% endfor %}</div>{% endif %}
+    <h1>{{ l.titulo }}</h1>
+    <p class="detail-authors">{{ l.autores or 'Autor desconocido' }}</p>
+
+    <dl class="facts">
+      <div><dt>ISBN</dt><dd class="code">{{ l.isbn }}</dd></div>
+      <div><dt>Editorial</dt><dd>{{ l.editorial or '—' }}</dd></div>
+      <div><dt>Año</dt><dd>{{ l.anio or '—' }}</dd></div>
+      <div><dt>Ejemplares</dt><dd>{{ l.total_ejemplares }}</dd></div>
+    </dl>
+
+    {% if l.descripcion %}<p class="detail-desc">{{ l.descripcion }}</p>{% endif %}
+
+    <div class="detail-avail {{ 'none' if not l.disponibles }}">
+      <i data-lucide="{{ 'circle-check' if l.disponibles else 'clock' }}"></i>
+      <div><b>{% if l.disponibles %}{{ l.disponibles }} de {{ l.total_ejemplares }} disponible{{ 's' if l.disponibles != 1 }}{% elif l.total_ejemplares %}Todos los ejemplares están prestados{% else %}Aún no hay ejemplares físicos{% endif %}</b>
+        <span>{% if l.disponibles %}Puedes encontrarlo en {{ (ejemplares|selectattr('estado', 'equalto', 'disponible')|first).ubicacion }}{% else %}Vuelve a revisar pronto{% endif %}</span></div>
+    </div>
+
+    <div class="detail-actions">
+      {% if auth.tipo == 'usuario' %}
+      <form method="post" action="{{ url_for('solicitar') }}">
+        <input type="hidden" name="isbn" value="{{ l.isbn }}">
+        <button class="btn pri" type="submit" {{ 'disabled' if not l.disponibles }}><i data-lucide="book-up"></i>Solicitar préstamo</button>
+      </form>
+      {% else %}
+      <a class="btn pri" href="{{ url_for('libro_editar', isbn=l.isbn) }}"><i data-lucide="pencil"></i>Editar libro</a>
+      <a class="btn" href="{{ url_for('ejemplar_nuevo', isbn=l.isbn) }}"><i data-lucide="plus"></i>Agregar ejemplar</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="grid-2" style="margin-top:28px{{ ';grid-template-columns:1fr' if auth.tipo != 'personal' }}">
+  <section class="card">
+    <header><h2>Ejemplares en la biblioteca</h2><p>{{ ejemplares|length }} en total</p></header>
+    {% for e in ejemplares %}
+    <div class="loan" style="grid-template-columns:auto 1fr auto">
+      <div class="spine-mini {{ e.estado }}" style="--c: {{ cat|color }}" aria-hidden="true"></div>
+      <div><div class="t code">{{ e.codigo_barras }}</div><div class="m"><i data-lucide="map-pin" style="width:13px;height:13px;display:inline;vertical-align:-2px"></i> {{ e.ubicacion }}</div></div>
+      {% if auth.tipo == 'personal' %}<a href="{{ url_for('ejemplar_editar', id_ejemplar=e.id_ejemplar) }}" style="text-decoration:none">{{ estado(e.estado) }}</a>{% else %}{{ estado(e.estado) }}{% endif %}
+    </div>
+    {% else %}
+    {{ empty('barcode', 'Sin ejemplares', 'Este título todavía no tiene copias físicas.') }}
+    {% endfor %}
+  </section>
+
+  {% if auth.tipo == 'personal' %}
+  <section class="card">
+    <header><h2>Historial de préstamos</h2><p>Últimos {{ historial|length }}</p></header>
+    {% for p in historial %}
+    <div class="loan" style="grid-template-columns:1fr auto">
+      <div><div class="t">{{ p.nombres }} <span class="m code">· {{ p.codigo }}</span></div>
+        <div class="m">{% if p.fecha_prestamo %}{{ p.fecha_prestamo|fecha }} → {{ p.fecha_devolucion|fecha if p.fecha_devolucion else 'vence ' ~ (p.fecha_vencimiento|fecha) }}{% else %}Solicitado {{ p.fecha_solicitud|hace }}{% endif %}
+          {% if p.codigo_barras %} · {{ p.codigo_barras }}{% endif %}{% if p.multa %} · <span class="money-bad">multa {{ p.multa|dinero }}</span>{% endif %}</div></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        {{ estado(p.estado) }}
+        {% if p.estado in ('activo', 'devuelto') %}<a class="btn icon ghost" href="{{ url_for('prestamo_comprobante', id_prestamo=p.id_prestamo) }}" title="Comprobante" aria-label="Comprobante"><i data-lucide="receipt-text"></i></a>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    {{ empty('history', 'Nunca se ha prestado', 'Será el primer préstamo de este título.') }}
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

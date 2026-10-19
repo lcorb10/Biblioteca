@@ -303,6 +303,65 @@
     });
   });
 
+  /* ---------- modo claro / oscuro ---------- */
+  const temaActual = () =>
+    root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.querySelectorAll("[data-theme-toggle]").forEach((b) => {
+    const label = () => b.setAttribute("aria-label", temaActual() === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+    label();
+    b.addEventListener("click", () => {
+      const nuevo = temaActual() === "dark" ? "light" : "dark";
+      root.classList.add("theme-switching");
+      root.setAttribute("data-theme", nuevo);
+      try { localStorage.setItem("bib-tema", nuevo); } catch (e) {}
+      label();
+      setTimeout(() => root.classList.remove("theme-switching"), 400);
+    });
+  });
+
+  /* ---------- panel "Ver SQL" ---------- */
+  const panel = document.getElementById("sql-panel");
+  if (panel) {
+    const KW = /\b(SELECT|FROM|WHERE|AND|OR|NOT|IN|IS|NULL|JOIN|LEFT|INNER|ON|AS|ORDER|BY|GROUP|HAVING|LIMIT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|EXISTS|LIKE|BETWEEN|DESC|ASC|DISTINCT|CASE|WHEN|THEN|ELSE|END|FOR|SEPARATOR|INTERVAL|DAY|MONTH)\b/g;
+    const FN = /\b(COUNT|GROUP_CONCAT|GREATEST|DATEDIFF|CURDATE|DATE_FORMAT|DATE_SUB|MIN|MAX|SUM|IF|NOW)\b(?=\()/g;
+    panel.querySelectorAll(".sql-stmt code").forEach((c) => {
+      const raw = c.textContent;
+      if (/^(START TRANSACTION|COMMIT|ROLLBACK);$/.test(raw.trim())) {
+        c.innerHTML = `<span class="tx">${raw}</span>`;
+        return;
+      }
+      // primero se separan las cadenas para no colorear palabras dentro de ellas
+      const partes = raw.split(/('(?:[^'\\]|\\.)*')/g);
+      c.innerHTML = partes.map((p, i) => {
+        const e = p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        if (i % 2) return `<span class="st">${e}</span>`;
+        return e.replace(KW, '<span class="kw">$1</span>').replace(FN, '<span class="fn">$1</span>')
+                .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="nu">$1</span>');
+      }).join("");
+    });
+    const abrir = () => { panel.hidden = false; panel.classList.remove("closing"); panel.querySelector("[data-sql-close]").focus(); };
+    const cerrar = () => { panel.classList.add("closing"); setTimeout(() => (panel.hidden = true), 240); };
+    document.querySelectorAll("[data-sql-open]").forEach((b) => b.addEventListener("click", () => (panel.hidden ? abrir() : cerrar())));
+    panel.querySelector("[data-sql-close]").addEventListener("click", cerrar);
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) cerrar(); });
+    panel.querySelectorAll(".sql-copy").forEach((b) => b.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(b.previousElementSibling.textContent);
+        b.innerHTML = '<i data-lucide="check"></i>';
+        icons();
+        setTimeout(() => { b.innerHTML = '<i data-lucide="copy"></i>'; icons(); }, 1200);
+      } catch (e) {}
+    }));
+  }
+
+  /* ---------- tablas como tarjetas en el celular: cada celda lleva su encabezado ---------- */
+  document.querySelectorAll(".table-wrap table").forEach((t) => {
+    const heads = [...t.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+    t.querySelectorAll("tbody tr").forEach((tr) =>
+      [...tr.children].forEach((td, i) => heads[i] && td.setAttribute("data-label", heads[i]))
+    );
+  });
+
   /* ---------- filtros que se envían solos ---------- */
   document.querySelectorAll("form[data-auto] select, form[data-auto] input[type=checkbox]").forEach((el) =>
     el.addEventListener("change", () => el.form.requestSubmit())

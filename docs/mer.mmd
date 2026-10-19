@@ -1,0 +1,69 @@
+erDiagram
+    EDITORIAL ||--o{ LIBRO : "publica"
+    LIBRO }o--|{ AUTOR : "escrito por"
+    LIBRO }o--o{ CATEGORIA : "clasificado en"
+    LIBRO ||--o{ EJEMPLAR : "tiene copias"
+    USUARIO ||--o{ PRESTAMO : "solicita"
+    LIBRO ||--o{ PRESTAMO : "es pedido en"
+    EJEMPLAR |o--o{ PRESTAMO : "se entrega en"
+    PERSONAL |o--o{ PRESTAMO : "aprueba"
+    PRESTAMO ||--o| DEVOLUCION : "se cierra con"
+    PERSONAL |o--o{ DEVOLUCION : "registra"
+
+    EDITORIAL {
+        int id_editorial PK
+        string nombre
+    }
+    AUTOR {
+        int id_autor PK
+        string nombre
+    }
+    CATEGORIA {
+        int id_categoria PK
+        string nombre
+    }
+    LIBRO {
+        string isbn PK
+        string titulo
+        int anio
+        text descripcion
+    }
+    EJEMPLAR {
+        int id_ejemplar PK
+        string codigo_barras UK
+        string ubicacion
+        enum estado "disponible | prestado | perdido"
+    }
+    USUARIO {
+        int id_usuario PK
+        string codigo UK
+        string identificacion UK
+        string nombres
+        string correo UK
+        enum rol "estudiante | docente"
+        string carrera "opcional"
+        enum estado "activo | bloqueado"
+    }
+    PERSONAL {
+        int id_personal PK
+        string login UK
+        string clave_hash
+        string nombres
+        enum rol "administrador | bibliotecario"
+    }
+    PRESTAMO {
+        int id_prestamo PK
+        datetime fecha_solicitud
+        date fecha_prestamo
+        date fecha_vencimiento
+        date fecha_devolucion
+        enum estado "solicitado | rechazado | activo | devuelto"
+    }
+    DEVOLUCION {
+        int id_devolucion PK
+        date fecha_devolucion
+        int dias_retraso
+        decimal multa
+        enum condicion "bueno | dañado | páginas faltantes"
+        string observaciones
+    }

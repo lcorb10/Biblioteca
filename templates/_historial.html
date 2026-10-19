@@ -7,7 +7,7 @@
   <div class="tl-item">
     {{ mini_cover(p.titulo, p.categoria, p.isbn) }}
     <div>
-      <div class="t">{{ p.titulo }} {% if p.codigo_barras %}<span class="m code">· {{ p.codigo_barras }}</span>{% endif %}</div>
+      <div class="t"><a class="link" href="{{ url_for('libro_detalle', isbn=p.isbn) }}">{{ p.titulo }}</a> {% if p.codigo_barras %}<span class="m code">· {{ p.codigo_barras }}</span>{% endif %}</div>
       <div class="tl-dates">
         <span>Solicitado <b>{{ p.fecha_solicitud.date()|fecha if p.fecha_solicitud else '—' }}</b></span>
         {% if p.fecha_prestamo %}<span>Prestado <b>{{ p.fecha_prestamo|fecha }}</b></span>{% endif %}
@@ -20,6 +20,7 @@
     </div>
     <div class="right">
       {% if vencido %}{{ estado('bad', 'Vencido') }}{% else %}{{ estado(p.estado if p.estado != 'activo' else 'vigente', textos[p.estado]) }}{% endif %}
+      {% if p.estado in ('activo', 'devuelto') %}<a class="btn sm ghost" href="{{ url_for('prestamo_comprobante', id_prestamo=p.id_prestamo) }}" style="margin-top:6px"><i data-lucide="receipt-text"></i>Comprobante</a>{% endif %}
       {% if p.multa %}<div class="late" style="margin-top:6px">Multa {{ p.multa|dinero }}<small>{{ p.dias_retraso }} día{{ 's' if p.dias_retraso != 1 }} tarde</small></div>{% endif %}
     </div>
   </div>

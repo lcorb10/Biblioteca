@@ -49,7 +49,7 @@
     <header><h2>Últimas devoluciones</h2></header>
     {% if ultimas %}
     <table>
-      <thead><tr><th>Libro</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Multa</th></tr></thead>
+      <thead><tr><th>Libro</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Multa</th><th></th></tr></thead>
       <tbody>
       {% for d in ultimas %}
       <tr>
@@ -58,6 +58,7 @@
         <td class="code">{{ d.fecha_devolucion|fecha }}{% if d.dias_retraso %}<div class="m">{{ d.dias_retraso }} d tarde</div>{% endif %}</td>
         <td><span class="badge-s {{ 'ok' if d.condicion == 'bueno' else 'warn' }}">{{ d.condicion|capitalize }}</span></td>
         <td style="text-align:right" class="{{ 'money-bad' if d.multa }}">{{ d.multa|dinero if d.multa else '—' }}</td>
+        <td class="actions"><a class="btn icon ghost" href="{{ url_for('prestamo_comprobante', id_prestamo=d.id_prestamo) }}" title="Comprobante" aria-label="Comprobante"><i data-lucide="receipt-text"></i></a></td>
       </tr>
       {% endfor %}
       </tbody>

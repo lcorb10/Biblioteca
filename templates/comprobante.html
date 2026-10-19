@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Comprobante #{{ p.id_prestamo }}{% endblock %}
+{% block body %}
+{% set devuelto = p.estado == 'devuelto' %}
+<div class="receipt-page">
+  <div class="receipt-bar no-print">
+    <a class="btn ghost" href="{{ request.referrer or url_for('inicio') }}"><i data-lucide="chevron-left"></i>Volver</a>
+    <button class="btn pri" type="button" onclick="print()"><i data-lucide="printer"></i>Imprimir comprobante</button>
+  </div>
+
+  <article class="receipt">
+    <header class="r-head">
+      <div class="r-logo"><svg viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M7 6v20M13 6v20M19.5 7l5 18.5"/></svg></div>
+      <div>
+        <b>Biblioteca Universitaria</b>
+        <span>{{ 'Comprobante de devolución' if devuelto else 'Comprobante de préstamo' }}</span>
+      </div>
+      <div class="r-num">N.º <b>{{ '%06d'|format(p.id_prestamo) }}</b></div>
+    </header>
+
+    <div class="r-stamp {{ 'ok' if devuelto else '' }}">{{ 'Devuelto' if devuelto else 'Prestado' }}</div>
+
+    <section class="r-sec">
+      <h3>Libro</h3>
+      <p class="r-big">{{ p.titulo }}</p>
+      <p class="r-muted">{{ p.autores or '' }}</p>
+      <dl>
+        <div><dt>ISBN</dt><dd>{{ p.isbn }}</dd></div>
+        <div><dt>Ejemplar</dt><dd>{{ p.codigo_barras }}</dd></div>
+        <div><dt>Ubicación</dt><dd>{{ p.ubicacion }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="r-sec">
+      <h3>Lector</h3>
+      <p class="r-big">{{ p.nombres }}</p>
+      <dl>
+        <div><dt>Código</dt><dd>{{ p.codigo }}</dd></div>
+        <div><dt>Identificación</dt><dd>{{ p.identificacion }}</dd></div>
+        <div><dt>Rol</dt><dd>{{ p.rol|capitalize }}{% if p.carrera %} · {{ p.carrera }}{% endif %}</dd></div>
+      </dl>
+    </section>
+
+    <section class="r-sec">
+      <h3>Préstamo</h3>
+      <dl>
+        <div><dt>Fecha de préstamo</dt><dd>{{ p.fecha_prestamo|fecha }}</dd></div>
+        <div><dt>Devolver antes de</dt><dd><b>{{ p.fecha_vencimiento|fecha }}</b></dd></div>
+        <div><dt>Aprobado por</dt><dd>{{ p.aprobado_por or '—' }}</dd></div>
+      </dl>
+    </section>
+
+    {% if devuelto %}
+    <section class="r-sec">
+      <h3>Devolución</h3>
+      <dl>
+        <div><dt>Fecha de devolución</dt><dd>{{ p.f_dev|fecha }}</dd></div>
+        <div><dt>Días de retraso</dt><dd>{{ p.dias_retraso }}</dd></div>
+        <div><dt>Estado del ejemplar</dt><dd>{{ p.condicion|capitalize }}</dd></div>
+        {% if p.observaciones %}<div><dt>Observaciones</dt><dd>{{ p.observaciones }}</dd></div>{% endif %}
+        <div><dt>Recibido por</dt><dd>{{ p.recibido_por or '—' }}</dd></div>
+      </dl>
+      <div class="r-total {{ 'bad' if p.multa }}"><span>Multa</span><b>{{ p.multa|dinero }}</b></div>
+    </section>
+    {% else %}
+    <p class="r-note">Si devuelves después del {{ p.fecha_vencimiento|fecha }} se cobra una multa de {{ tarifa|dinero }} por cada día de retraso.</p>
+    {% endif %}
+
+    <footer class="r-foot">
+      <div class="barcode" aria-label="Código {{ p.codigo_barras }}">
+        {% for w in p.codigo_barras|barras %}<i style="width: {{ w }}px"></i>{% endfor %}
+      </div>
+      <span class="code">{{ p.codigo_barras }} · {{ hoy|fecha }}</span>
+      <p>Gracias por cuidar los libros de todos.</p>
+    </footer>
+  </article>
+</div>
+{% endblock %}

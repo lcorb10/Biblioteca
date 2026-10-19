@@ -36,7 +36,7 @@
     {% for p in vencidos %}
     <div class="loan">
       {{ mini_cover(p.titulo, p.categoria, p.isbn) }}
-      <div><div class="t">{{ p.titulo }}</div><div class="m">{{ p.usuario }} · {{ p.codigo_barras }} · vencía el {{ p.fecha_vencimiento|fecha }}</div></div>
+      <div><a class="t link" href="{{ url_for('libro_detalle', isbn=p.isbn) }}">{{ p.titulo }}</a><div class="m">{{ p.usuario }} · {{ p.codigo_barras }} · vencía el {{ p.fecha_vencimiento|fecha }}</div></div>
       <div class="late">{{ p.dias_retraso }} día{{ 's' if p.dias_retraso != 1 }} tarde<small>{{ p.multa_estimada|dinero }}</small></div>
     </div>
     {% else %}
