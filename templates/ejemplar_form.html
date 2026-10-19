@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import delete_form %}
+{% block title %}{{ 'Nuevo ejemplar' if nuevo else ej.codigo_barras }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('ejemplares') }}"><i data-lucide="chevron-left"></i>Ejemplares</a>
+<div class="head">
+  <div><h1>{{ 'Nuevo ejemplar' if nuevo else 'Ejemplar ' ~ ej.codigo_barras }}</h1>
+    <p class="sub">{{ 'Una copia física de un libro del catálogo.' if nuevo else ej.titulo }}</p></div>
+</div>
+
+<div class="grid-2">
+  <form method="post" class="card form">
+    <div class="field"><label for="isbn">Libro</label>
+      <select id="isbn" name="isbn" required>
+        <option value="">Selecciona un libro…</option>
+        {% for l in libros %}<option value="{{ l.isbn }}" {{ 'selected' if l.isbn == ej.isbn }}>{{ l.titulo }} · {{ l.isbn }}</option>{% endfor %}
+      </select></div>
+    <div class="row">
+      <div class="field"><label for="codigo_barras">Código de barras</label>
+        <input type="text" id="codigo_barras" name="codigo_barras" value="{{ ej.codigo_barras or '' }}" required maxlength="30" placeholder="EJ-0008"></div>
+      <div class="field"><label for="ubicacion">Ubicación</label>
+        <input type="text" id="ubicacion" name="ubicacion" value="{{ ej.ubicacion or '' }}" required maxlength="80" placeholder="Sala 1 / Estante A2"></div>
+    </div>
+    <div class="field"><span class="label">Estado</span>
+      <div class="radio-cards">
+        {% for e, icon in [('disponible','circle-check'), ('prestado','book-up'), ('perdido','circle-help')] %}
+        <input type="radio" id="est-{{ e }}" name="estado" value="{{ e }}" {{ 'checked' if (ej.estado or 'disponible') == e }}>
+        <label for="est-{{ e }}"><i data-lucide="{{ icon }}"></i>{{ e|capitalize }}</label>
+        {% endfor %}
+      </div>
+      <div class="hint">Los préstamos y devoluciones cambian el estado solos; edítalo a mano solo para corregir o reportar una pérdida.</div>
+    </div>
+    <div class="form-actions">
+      <a class="btn ghost" href="{{ url_for('ejemplares') }}">Cancelar</a>
+      <button class="btn pri" type="submit"><i data-lucide="check"></i>{{ 'Crear ejemplar' if nuevo else 'Guardar cambios' }}</button>
+    </div>
+  </form>
+  {% if not nuevo %}
+  <section class="card">
+    <h3>Zona de cuidado</h3>
+    <p class="muted small" style="margin:4px 0 12px">Si el ejemplar tiene préstamos en su historial no se puede eliminar; márcalo como perdido.</p>
+    {{ delete_form(url_for('ejemplar_eliminar', id_ejemplar=ej.id_ejemplar), '¿Eliminar el ejemplar ' ~ ej.codigo_barras ~ '?', 'Esta acción no se puede deshacer.') }}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

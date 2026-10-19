@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado, empty, delete_form %}
+{% block title %}Ejemplares{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Ejemplares</h1><p class="sub">Copias físicas de cada libro, con su código de barras, ubicación y estado.</p></div>
+  <div class="actions"><a class="btn pri" href="{{ url_for('ejemplar_nuevo') }}"><i data-lucide="plus"></i>Nuevo ejemplar</a></div>
+</div>
+
+{% set total = inv.disponible + inv.prestado + inv.perdido %}
+<div class="table-wrap">
+  <header>
+    <div class="seg" role="tablist" aria-label="Filtrar por estado">
+      <a href="{{ url_for('ejemplares', q=q) }}" class="{{ 'on' if not estado }}">Todos<span class="n">{{ total }}</span></a>
+      {% for e in ['disponible', 'prestado', 'perdido'] %}
+      <a href="{{ url_for('ejemplares', estado=e, q=q) }}" class="{{ 'on' if estado == e }}">{{ e|capitalize }}s<span class="n">{{ inv[e] }}</span></a>
+      {% endfor %}
+    </div>
+    <form method="get" class="search-field" style="max-width:320px">
+      <input type="hidden" name="estado" value="{{ estado }}">
+      <label class="sr-only" for="q">Buscar</label>
+      <i data-lucide="search"></i><input type="search" id="q" name="q" placeholder="Código, título o ISBN" value="{{ q }}" data-live=".table-wrap table">
+    </form>
+  </header>
+  {% if ejemplares %}
+  <table>
+    <thead><tr><th>Código</th><th>Libro</th><th>Ubicación</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for e in ejemplares %}
+      <tr>
+        <td><span class="t code">{{ e.codigo_barras }}</span></td>
+        <td><div class="t">{{ e.titulo }}</div><div class="m code">{{ e.isbn }}</div></td>
+        <td><span class="muted" style="display:inline-flex;align-items:center;gap:6px"><i data-lucide="map-pin" style="width:15px;height:15px"></i>{{ e.ubicacion }}</span></td>
+        <td>{{ estado(e.estado) }}</td>
+        <td class="actions">
+          <a class="btn sm" href="{{ url_for('ejemplar_editar', id_ejemplar=e.id_ejemplar) }}"><i data-lucide="pencil"></i>Editar</a>
+          {{ delete_form(url_for('ejemplar_eliminar', id_ejemplar=e.id_ejemplar), '¿Eliminar el ejemplar ' ~ e.codigo_barras ~ '?', 'No se puede eliminar si tiene préstamos registrados; en ese caso márcalo como perdido.') }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {{ empty('barcode', 'No hay ejemplares con este filtro', 'Cambia el filtro o registra una copia nueva.', 'Nuevo ejemplar', url_for('ejemplar_nuevo')) }}
+  {% endif %}
+</div>
+{% endblock %}

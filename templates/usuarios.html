@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado, empty, delete_form %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Usuarios</h1><p class="sub">Estudiantes y docentes que pueden pedir libros prestados.</p></div>
+  <div class="actions"><a class="btn pri" href="{{ url_for('usuario_nuevo') }}"><i data-lucide="user-plus"></i>Nuevo usuario</a></div>
+</div>
+
+<div class="table-wrap">
+  <header>
+    <form method="get" class="filters" style="margin:0;flex:1" data-auto>
+      <div class="search-field" style="max-width:340px"><label class="sr-only" for="q">Buscar</label>
+        <i data-lucide="search"></i><input type="search" id="q" name="q" placeholder="Nombre, código o correo" value="{{ f.q }}" data-live=".table-wrap table"></div>
+      <select name="rol" aria-label="Rol" style="width:auto">
+        <option value="">Todos los roles</option>
+        {% for r in ['estudiante', 'docente'] %}<option value="{{ r }}" {{ 'selected' if f.rol == r }}>{{ r|capitalize }}s</option>{% endfor %}
+      </select>
+      <select name="estado" aria-label="Estado" style="width:auto">
+        <option value="">Cualquier estado</option>
+        {% for e in ['activo', 'bloqueado'] %}<option value="{{ e }}" {{ 'selected' if f.estado == e }}>{{ e|capitalize }}s</option>{% endfor %}
+      </select>
+    </form>
+    <span class="muted small">{{ usuarios|length }} usuario{{ 's' if usuarios|length != 1 }}</span>
+  </header>
+  {% if usuarios %}
+  <table>
+    <thead><tr><th>Usuario</th><th>Código</th><th>Identificación</th><th>Rol · carrera</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr>
+        <td><div class="cell-book"><div class="avatar" style="background:{{ u.nombres|color }};width:34px;height:34px;font-size:12px">{{ u.nombres|iniciales }}</div>
+          <div><div class="t">{{ u.nombres }}</div><div class="m">{{ u.correo }}</div></div></div></td>
+        <td class="code">{{ u.codigo }}</td>
+        <td class="code">{{ u.identificacion }}</td>
+        <td>{{ u.rol|capitalize }}<div class="m">{{ u.carrera or '—' }}</div></td>
+        <td>{{ estado(u.estado) }}</td>
+        <td class="actions">
+          <a class="btn sm ghost" href="{{ url_for('usuario_historial', id_usuario=u.id_usuario) }}"><i data-lucide="history"></i>Historial</a>
+          <a class="btn sm" href="{{ url_for('usuario_editar', id_usuario=u.id_usuario) }}"><i data-lucide="pencil"></i>Editar</a>
+          {{ delete_form(url_for('usuario_eliminar', id_usuario=u.id_usuario), '¿Eliminar a ' ~ u.nombres ~ '?', 'No se puede eliminar si tiene préstamos registrados; en ese caso bloquéalo.') }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {{ empty('users', 'No hay usuarios con estos filtros', '', 'Nuevo usuario', url_for('usuario_nuevo')) }}
+  {% endif %}
+</div>
+{% endblock %}

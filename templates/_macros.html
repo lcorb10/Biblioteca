@@ -1,0 +1,52 @@
+{# Estante: cada ejemplar es un lomo; color = categoría, alto = libro #}
+{% macro shelf(libros, link=true, extra='') -%}
+<div class="books {{ extra }}">
+  {% for b in libros %}
+  {% set w = ['', 'w2', 'w3'][(b.titulo|length) % 3] %}
+  <{{ 'a' if link else 'div' }} class="spine {{ w }} {{ b.estado }}{% if extra and loop.index == (libros|length * 2 // 3) %} leaning{% endif %}"
+     {% if link %}href="{{ url_for('ejemplar_editar', id_ejemplar=b.id_ejemplar) }}"{% else %}tabindex="-1"{% endif %}
+     style="--c: {{ b.categoria|color }}; --h: {{ (b.isbn|alto * (1.8 if extra else 1))|int }}px; --i: {{ loop.index0 }}"
+     aria-label="{{ b.titulo }}, ejemplar {{ b.codigo_barras }}, {{ b.estado }}">
+    <span>{{ b.titulo }}</span>
+    {% if link %}<span hidden data-tip><b>{{ b.titulo }}</b>{{ b.codigo_barras }} · {{ b.estado }}{% if b.categoria %}<br>{{ b.categoria }}{% endif %}</span>{% endif %}
+  </{{ 'a' if link else 'div' }}>
+  {% endfor %}
+  {% if not extra %}<div class="bookend" aria-hidden="true"></div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro mini_cover(titulo, categoria, isbn=none) -%}
+<div class="mini-cover" style="--c: {{ (categoria or titulo)|color }}" aria-hidden="true">{{ titulo|iniciales }}{% if isbn %}{{ real_cover(isbn, "M") }}{% endif %}</div>
+{%- endmacro %}
+
+{# Portada real desde Open Library por ISBN; si no existe, queda la generada debajo #}
+{% macro real_cover(isbn, size="L") -%}
+<img class="real" src="https://covers.openlibrary.org/b/isbn/{{ isbn }}-{{ size }}.jpg?default=false" alt="" loading="lazy" decoding="async"
+     onload="this.naturalWidth > 10 ? this.classList.add('ok') : this.remove()" onerror="this.remove()">
+{%- endmacro %}
+
+{% macro estado(e, texto=none) -%}
+<span class="badge-s {{ e }}">{{ texto or e|capitalize }}</span>
+{%- endmacro %}
+
+{% macro empty(icon, titulo, texto='', accion=none, href='#') -%}
+<div class="empty">
+  <i data-lucide="{{ icon }}"></i>
+  <b>{{ titulo }}</b>{{ texto }}
+  {% if accion %}<div><a class="btn pri sm" href="{{ href }}"><i data-lucide="plus"></i>{{ accion }}</a></div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro delete_form(action, titulo, detalle) -%}
+<form method="post" action="{{ action }}" data-confirm="{{ titulo }}" data-detail="{{ detalle }}" style="display:inline">
+  <button class="btn sm danger" type="submit"><i data-lucide="trash-2"></i>Eliminar</button>
+</form>
+{%- endmacro %}
+
+{% macro legend(inv) -%}
+<div class="legend">
+  <div class="legend-row"><i class="disp"></i><b data-count="{{ inv.disponible }}">{{ inv.disponible }}</b>disponibles</div>
+  <div class="legend-row"><i class="prest"></i><b data-count="{{ inv.prestado }}">{{ inv.prestado }}</b>prestados</div>
+  <div class="legend-row"><i class="perd"></i><b data-count="{{ inv.perdido }}">{{ inv.perdido }}</b>perdidos</div>
+</div>
+{%- endmacro %}

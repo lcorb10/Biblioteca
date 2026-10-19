@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import delete_form %}
+{% block title %}{{ 'Nuevo usuario' if nuevo else u.nombres }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('usuarios') }}"><i data-lucide="chevron-left"></i>Usuarios</a>
+<div class="head">
+  <div><h1>{{ 'Nuevo usuario' if nuevo else u.nombres }}</h1>
+    <p class="sub">{{ 'El lector ingresará con su código y su número de identificación.' if nuevo else u.correo }}</p></div>
+  {% if not nuevo %}<div class="actions"><a class="btn" href="{{ url_for('usuario_historial', id_usuario=u.id_usuario) }}"><i data-lucide="history"></i>Ver historial</a></div>{% endif %}
+</div>
+
+<div class="grid-2">
+  <form method="post" class="card form">
+    <div class="field"><label for="nombres">Nombres completos</label>
+      <input type="text" id="nombres" name="nombres" value="{{ u.nombres or '' }}" required maxlength="120" autocomplete="off"></div>
+    <div class="row">
+      <div class="field"><label for="codigo">Código</label>
+        <input type="text" id="codigo" name="codigo" value="{{ u.codigo or '' }}" required maxlength="20" placeholder="U005"></div>
+      <div class="field"><label for="identificacion">Identificación</label>
+        <input type="text" id="identificacion" name="identificacion" value="{{ u.identificacion or '' }}" required maxlength="20" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label for="correo">Correo</label>
+      <input type="email" id="correo" name="correo" value="{{ u.correo or '' }}" required maxlength="120" placeholder="nombre@uni.edu.co"></div>
+    <div class="row">
+      <div class="field"><span class="label">Rol</span>
+        <div class="seg" style="display:flex">
+          {% for r in ['estudiante', 'docente'] %}
+          <input type="radio" id="rol-{{ r }}" name="rol" value="{{ r }}" {{ 'checked' if u.rol == r }}><label for="rol-{{ r }}" style="flex:1;text-align:center">{{ r|capitalize }}</label>
+          {% endfor %}
+        </div></div>
+      <div class="field"><label for="carrera">Carrera <span class="opt">(opcional)</span></label>
+        <input type="text" id="carrera" name="carrera" value="{{ u.carrera or '' }}" maxlength="100"></div>
+    </div>
+    <div class="field"><span class="label">Estado</span>
+      <div class="radio-cards" style="grid-template-columns:1fr 1fr">
+        <input type="radio" id="est-activo" name="estado" value="activo" {{ 'checked' if u.estado == 'activo' }}>
+        <label for="est-activo"><i data-lucide="user-check"></i>Activo · puede pedir libros</label>
+        <input type="radio" id="est-bloqueado" name="estado" value="bloqueado" {{ 'checked' if u.estado == 'bloqueado' }}>
+        <label for="est-bloqueado"><i data-lucide="user-x"></i>Bloqueado · no puede pedir</label>
+      </div></div>
+    <div class="form-actions">
+      <a class="btn ghost" href="{{ url_for('usuarios') }}">Cancelar</a>
+      <button class="btn pri" type="submit"><i data-lucide="check"></i>{{ 'Registrar usuario' if nuevo else 'Guardar cambios' }}</button>
+    </div>
+  </form>
+  {% if not nuevo %}
+  <section class="card">
+    <h3>Zona de cuidado</h3>
+    <p class="muted small" style="margin:4px 0 12px">Si el usuario tiene préstamos registrados no se puede eliminar; bloquéalo en su lugar.</p>
+    {{ delete_form(url_for('usuario_eliminar', id_usuario=u.id_usuario), '¿Eliminar a ' ~ u.nombres ~ '?', 'Esta acción no se puede deshacer.') }}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

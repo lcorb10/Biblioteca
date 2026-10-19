@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Biblioteca{% endblock %} · Biblioteca Universitaria</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236E1F33'/><rect x='8' y='8' width='4' height='16' rx='1' fill='white'/><rect x='14' y='6' width='4' height='18' rx='1' fill='white'/><rect x='20' y='9' width='4' height='15' rx='1' fill='white' transform='rotate(12 22 24)'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script>
+    try {
+      if (sessionStorage.getItem("bib-intro") && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+        document.documentElement.classList.add("intro-playing");
+    } catch (e) {}
+  </script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+{% block body %}
+<div class="app">
+  <aside class="rail" aria-label="Menú principal">
+    <a class="logo" href="{{ url_for('inicio') }}" aria-label="Inicio"><i data-lucide="library-big"></i></a>
+    <button class="rail-search" type="button" data-palette aria-label="Buscar (Ctrl+K)"><i data-lucide="search"></i><kbd>Ctrl K</kbd></button>
+    <nav>
+      {% for ep, label, icon in nav %}
+      <a href="{{ url_for(ep) }}" class="{{ 'on' if seccion == ep }}"
+         {% if seccion == ep %}aria-current="page"{% endif %}>
+        <i data-lucide="{{ icon }}"></i>{{ label }}
+        {% if ep == 'prestamos' and pendientes %}<span class="badge" aria-label="{{ pendientes }} solicitudes">{{ pendientes }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="me">
+      <div class="avatar" title="{{ auth.nombre }} · {{ auth.rol }}">{{ auth.nombre|iniciales }}</div>
+      <a href="{{ url_for('logout') }}" aria-label="Cerrar sesión" title="Cerrar sesión"><i data-lucide="log-out"></i></a>
+    </div>
+  </aside>
+  <div id="intro" aria-hidden="true">
+    <div class="intro-glow"></div>
+    <div class="intro-stage">
+      <div class="intro-book">
+        <div class="intro-page">
+          <span class="intro-hi">Hola,</span>
+          {% set nom = auth.nombre.split()[0] %}<b class="intro-name" style="font-size: {{ [40, (250 / (nom|length))|int]|min }}px">{{ nom }}</b>
+          <span class="intro-rule"></span>
+          <small>{{ hoy_largo }}</small>
+          <small class="intro-role">{{ 'Tu biblioteca está lista' if auth.tipo == 'personal' else 'Tus libros te esperan' }}</small>
+        </div>
+        <div class="intro-cover">
+          <div class="intro-front">
+            <span class="intro-logo"><svg viewBox="0 0 32 32" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 6v20M13 6v20M19.5 7l5 18.5"/></svg></span>
+            <span class="intro-title">Biblioteca<br>Universitaria</span>
+            <span class="intro-band"></span>
+          </div>
+          <div class="intro-back"><span>Ex libris</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <main class="page" id="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs and request.endpoint != 'login' %}
+<div class="toasts" role="status" aria-live="polite">
+  {% for cat, msg in msgs %}
+  <div class="toast {{ cat }}">
+    <i data-lucide="{{ {'ok':'circle-check','error':'circle-x','warn':'triangle-alert'}.get(cat, 'info') }}"></i>
+    <p>{{ msg }}</p>
+    <button type="button" aria-label="Cerrar aviso"><i data-lucide="x"></i></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% if auth %}
+{% set staff = auth.tipo == 'personal' %}
+{% set ir_nav = [] %}{% for ep, label, icon in nav %}{% set _ = ir_nav.append([label, icon, url_for(ep)]) %}{% endfor %}
+{% set pal = {
+  "staff": staff,
+  "catalogo": url_for('catalogo'),
+  "editar": url_for('libro_editar', isbn='__ISBN__') if staff else '',
+  "buscar": ([
+      ["Buscar en el catálogo por título", "book-open", url_for('catalogo') ~ "?titulo="],
+      ["Buscar por autor", "pen-line", url_for('catalogo') ~ "?autor="],
+      ["Buscar por ISBN", "hash", url_for('catalogo') ~ "?isbn="]]
+    + ([["Buscar usuarios", "users", url_for('usuarios') ~ "?q="],
+        ["Buscar ejemplares por código", "barcode", url_for('ejemplares') ~ "?q="]] if staff else [])),
+  "ir": ir_nav
+    + ([["Nuevo libro", "book-plus", url_for('libro_nuevo')], ["Nuevo ejemplar", "barcode", url_for('ejemplar_nuevo')],
+        ["Nuevo usuario", "user-plus", url_for('usuario_nuevo')], ["Préstamo directo", "book-up", url_for('prestamo_nuevo')],
+        ["Registrar devolución", "undo-2", url_for('devoluciones')]] if staff else [])
+    + [["Cerrar sesión", "log-out", url_for('logout')]],
+  "libros": pal_libros or []
+} %}
+<dialog class="palette" id="palette" aria-label="Buscador rápido">
+  <div class="pal-in"><i data-lucide="search"></i>
+    <input id="pal-q" type="text" placeholder="Busca un libro, autor o ISBN… o escribe a dónde ir" autocomplete="off" spellcheck="false" aria-controls="pal-list">
+    <kbd>Esc</kbd></div>
+  <div class="pal-list" id="pal-list" role="listbox"></div>
+  <div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> moverse</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> cerrar</span><span class="brand">Biblioteca</span></div>
+</dialog>
+<script id="pal-data" type="application/json">{{ pal|tojson }}</script>
+{% endif %}
+
+<dialog class="confirm" id="confirm">
+  <form method="dialog">
+    <div class="ico"><i data-lucide="trash-2"></i></div>
+    <h2>¿Eliminar?</h2>
+    <p>Esta acción no se puede deshacer.</p>
+    <div class="form-actions">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button class="btn pri" value="ok" style="background:var(--red);border-color:var(--red)">Sí, eliminar</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% from "_macros.html" import mini_cover, estado, empty %}
+{% set textos = {'solicitado': 'Esperando aprobación', 'activo': 'En préstamo', 'devuelto': 'Devuelto', 'rechazado': 'Rechazado'} %}
+{% if historial %}
+<div class="timeline">
+  {% for p in historial %}
+  {% set vencido = p.estado == 'activo' and p.fecha_vencimiento and p.fecha_vencimiento < hoy %}
+  <div class="tl-item">
+    {{ mini_cover(p.titulo, p.categoria, p.isbn) }}
+    <div>
+      <div class="t">{{ p.titulo }} {% if p.codigo_barras %}<span class="m code">· {{ p.codigo_barras }}</span>{% endif %}</div>
+      <div class="tl-dates">
+        <span>Solicitado <b>{{ p.fecha_solicitud.date()|fecha if p.fecha_solicitud else '—' }}</b></span>
+        {% if p.fecha_prestamo %}<span>Prestado <b>{{ p.fecha_prestamo|fecha }}</b></span>{% endif %}
+        {% if p.fecha_vencimiento %}<span>Vence <b>{{ p.fecha_vencimiento|fecha }}</b></span>{% endif %}
+        {% if p.fecha_devolucion %}<span>Devuelto <b>{{ p.fecha_devolucion|fecha }}</b></span>{% endif %}
+      </div>
+      {% if p.condicion and p.condicion != 'bueno' or p.observaciones %}
+      <div class="obs">Llegó <b>{{ p.condicion }}</b>{% if p.observaciones %} · «{{ p.observaciones }}»{% endif %}</div>
+      {% endif %}
+    </div>
+    <div class="right">
+      {% if vencido %}{{ estado('bad', 'Vencido') }}{% else %}{{ estado(p.estado if p.estado != 'activo' else 'vigente', textos[p.estado]) }}{% endif %}
+      {% if p.multa %}<div class="late" style="margin-top:6px">Multa {{ p.multa|dinero }}<small>{{ p.dias_retraso }} día{{ 's' if p.dias_retraso != 1 }} tarde</small></div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+{{ empty('book-open', vacio_titulo, vacio_texto, vacio_accion, vacio_href) }}
+{% endif %}

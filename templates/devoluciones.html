@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mini_cover, empty %}
+{% block title %}Devoluciones{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Devoluciones</h1>
+    <p class="sub">Recibe el libro, revisa cómo llegó y la multa se calcula sola ({{ tarifa|dinero }} por día de retraso).</p></div>
+</div>
+
+<div class="grid-2" style="grid-template-columns:1fr 1.15fr">
+  <section class="card">
+    {% if activos %}
+    <form method="post" class="form">
+      <div class="field"><label for="id_prestamo">Préstamo que se devuelve</label>
+        <select id="id_prestamo" name="id_prestamo" required>
+          {% for a in activos %}
+          <option value="{{ a.id_prestamo }}" {{ 'selected' if sel == a.id_prestamo }}
+            data-vence="{{ a.fecha_vencimiento.isoformat() }}" data-vence-txt="{{ a.fecha_vencimiento|fecha }}"
+            data-info="{{ a.usuario }} · ejemplar {{ a.codigo_barras }} · prestado el {{ a.fecha_prestamo|fecha }}">
+            {{ a.codigo_barras }} · {{ a.titulo }} · {{ a.usuario }}{{ ' (vencido)' if a.dias_retraso }}</option>
+          {% endfor %}
+        </select>
+        <div class="hint" id="detalle-prestamo"></div></div>
+      <div class="field"><label for="fecha_devolucion">Fecha de devolución</label>
+        <input type="date" id="fecha_devolucion" name="fecha_devolucion" value="{{ hoy.isoformat() }}" max="{{ hoy.isoformat() }}"></div>
+
+      <div class="fine-box" data-fine="{{ tarifa }}" aria-live="polite">
+        <i data-lucide="circle-check" class="i-ok"></i><i data-lucide="triangle-alert" class="i-late"></i>
+        <div><b>Sin multa</b><span></span></div>
+      </div>
+
+      <div class="field"><span class="label">¿Cómo llega el ejemplar?</span>
+        <div class="radio-cards">
+          {% for c, icon in [('bueno', 'sparkles'), ('dañado', 'bandage'), ('páginas faltantes', 'file-x')] %}
+          <input type="radio" id="cond-{{ loop.index }}" name="condicion" value="{{ c }}" {{ 'checked' if loop.first }}>
+          <label for="cond-{{ loop.index }}"><i data-lucide="{{ icon }}"></i>{{ c|capitalize }}</label>
+          {% endfor %}
+        </div></div>
+      <div class="field"><label for="observaciones">Observaciones <span class="opt">(opcional)</span></label>
+        <textarea id="observaciones" name="observaciones" maxlength="300" placeholder="Ej.: portada rayada, falta la página 120…"></textarea></div>
+      <div class="form-actions"><button class="btn pri" type="submit"><i data-lucide="undo-2"></i>Registrar devolución</button></div>
+    </form>
+    {% else %}
+    {{ empty('book-check', 'No hay préstamos activos', 'Todos los libros están en el estante.') }}
+    {% endif %}
+  </section>
+
+  <section class="table-wrap">
+    <header><h2>Últimas devoluciones</h2></header>
+    {% if ultimas %}
+    <table>
+      <thead><tr><th>Libro</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Multa</th></tr></thead>
+      <tbody>
+      {% for d in ultimas %}
+      <tr>
+        <td><div class="t">{{ d.titulo }}</div><div class="m">{{ d.usuario }} · <span class="code">{{ d.codigo_barras }}</span></div>
+          {% if d.observaciones %}<div class="obs">«{{ d.observaciones }}»</div>{% endif %}</td>
+        <td class="code">{{ d.fecha_devolucion|fecha }}{% if d.dias_retraso %}<div class="m">{{ d.dias_retraso }} d tarde</div>{% endif %}</td>
+        <td><span class="badge-s {{ 'ok' if d.condicion == 'bueno' else 'warn' }}">{{ d.condicion|capitalize }}</span></td>
+        <td style="text-align:right" class="{{ 'money-bad' if d.multa }}">{{ d.multa|dinero if d.multa else '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    {{ empty('history', 'Todavía no hay devoluciones', 'Aparecerán aquí a medida que las registres.') }}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

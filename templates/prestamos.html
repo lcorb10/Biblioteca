@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mini_cover, estado, empty %}
+{% block title %}Préstamos{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Préstamos</h1>
+    <p class="sub">Aprueba las solicitudes asignando un ejemplar y vigila los vencimientos.</p></div>
+  <div class="actions"><a class="btn pri" href="{{ url_for('prestamo_nuevo') }}"><i data-lucide="plus"></i>Préstamo directo</a></div>
+</div>
+
+<div class="grid-2" style="grid-template-columns:1.5fr 1fr">
+  <section class="table-wrap">
+    <header>
+      <h2>En manos de lectores</h2>
+      <div class="seg" role="tablist" aria-label="Filtrar préstamos">
+        {% for k, label in [('todos', 'Todos'), ('vencidos', 'Vencidos'), ('vigentes', 'Vigentes')] %}
+        <a href="{{ url_for('prestamos', filtro=k) }}" class="{{ 'on' if filtro == k }}">{{ label }}<span class="n">{{ conteo[k] }}</span></a>
+        {% endfor %}
+      </div>
+    </header>
+    {% if activos %}
+    <table>
+      <thead><tr><th>Libro</th><th>Lector</th><th>Vence</th><th>Situación</th><th></th></tr></thead>
+      <tbody>
+      {% for p in activos %}
+        <tr>
+          <td><div class="cell-book">{{ mini_cover(p.titulo, p.categoria, p.isbn) }}<div><div class="t">{{ p.titulo }}</div><div class="m code">{{ p.codigo_barras }}</div></div></div></td>
+          <td>{{ p.usuario }}<div class="m code">{{ p.codigo }}</div></td>
+          <td class="code">{{ p.fecha_vencimiento|fecha }}</td>
+          <td>{% if p.dias_retraso %}{{ estado('bad', p.dias_retraso ~ ' día' ~ ('s' if p.dias_retraso != 1 else '') ~ ' tarde') }}<div class="m money-bad" style="margin-top:3px">{{ p.multa_estimada|dinero }}</div>
+              {% else %}{{ estado('vigente', 'Al día') }}{% endif %}</td>
+          <td class="actions"><a class="btn sm" href="{{ url_for('devoluciones', prestamo=p.id_prestamo) }}"><i data-lucide="undo-2"></i>Devolver</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    {{ empty('book-check', 'Nada por aquí', 'No hay préstamos ' ~ ('vencidos' if filtro == 'vencidos' else 'activos') ~ '.') }}
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <header><h2>Esperan aprobación</h2><p>{{ solicitudes|length }} solicitud{{ 'es' if solicitudes|length != 1 }}</p></header>
+    {% for s in solicitudes %}
+    <div class="req">
+      <div class="who">
+        <div class="cell-book">{{ mini_cover(s.titulo, s.categoria, s.isbn) }}
+          <div><div class="t">{{ s.titulo }}</div><div class="m">{{ s.nombres }}, {{ s.rol }} · {{ s.fecha_solicitud|hace }}</div></div></div>
+      </div>
+      {% if s.estado_usuario != 'activo' %}
+      <div class="warn-line"><i data-lucide="user-x"></i>El usuario está bloqueado: no se puede aprobar.</div>
+      {% elif not s.ejemplares %}
+      <div class="warn-line"><i data-lucide="book-x"></i>No quedan ejemplares disponibles de este libro.</div>
+      {% endif %}
+      <form method="post" action="{{ url_for('prestamo_aprobar', id_prestamo=s.id_prestamo) }}">
+        <div class="field"><label for="ej-{{ s.id_prestamo }}">Entregar el ejemplar</label>
+          <select id="ej-{{ s.id_prestamo }}" name="id_ejemplar" {{ 'disabled' if not s.ejemplares }}>
+            {% for e in s.ejemplares %}<option value="{{ e.id_ejemplar }}">{{ e.codigo_barras }} · {{ e.ubicacion }}</option>{% else %}<option>—</option>{% endfor %}
+          </select></div>
+        <div class="field"><label for="v-{{ s.id_prestamo }}">Vence</label>
+          <input type="date" id="v-{{ s.id_prestamo }}" name="vence" value="{{ venc_default.isoformat() }}" min="{{ hoy.isoformat() }}"></div>
+        <div class="btns">
+          <button class="btn pri sm" type="submit" {{ 'disabled' if not s.ejemplares or s.estado_usuario != 'activo' }}><i data-lucide="check"></i>Aprobar préstamo</button>
+          <button class="btn sm" type="submit" formaction="{{ url_for('prestamo_rechazar', id_prestamo=s.id_prestamo) }}" formnovalidate><i data-lucide="x"></i>Rechazar</button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    {{ empty('inbox', 'Bandeja vacía', 'Las solicitudes que hagan los lectores desde el catálogo aparecerán aquí.') }}
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

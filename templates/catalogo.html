@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty, real_cover %}
+{% block title %}Catálogo{% endblock %}
+{% block content %}
+<div class="head">
+  <div>
+    <h1>Catálogo</h1>
+    <p class="sub">{{ libros|length }} título{{ 's' if libros|length != 1 }}{% if f.titulo or f.autor or f.isbn or f.categoria or f.disp %} con estos filtros{% endif %}.
+      {% if auth.tipo == 'usuario' %}Elige un libro disponible y solicítalo; un bibliotecario aprobará tu préstamo.{% endif %}</p>
+  </div>
+  {% if auth.tipo == 'personal' %}<div class="actions"><a class="btn pri" href="{{ url_for('libro_nuevo') }}"><i data-lucide="plus"></i>Nuevo libro</a></div>{% endif %}
+</div>
+
+<form class="filters" method="get" data-auto>
+  <div class="search-field" style="flex:2">
+    <label class="sr-only" for="titulo">Título</label>
+    <i data-lucide="search"></i><input type="search" id="titulo" name="titulo" placeholder="Buscar por título" value="{{ f.titulo }}" data-live=".catalog">
+  </div>
+  <div class="search-field"><label class="sr-only" for="autor">Autor</label>
+    <i data-lucide="pen-line"></i><input type="search" id="autor" name="autor" placeholder="Autor" value="{{ f.autor }}"></div>
+  <div class="search-field"><label class="sr-only" for="isbn">ISBN</label>
+    <i data-lucide="hash"></i><input type="search" id="isbn" name="isbn" placeholder="ISBN" value="{{ f.isbn }}" inputmode="numeric"></div>
+  <div style="min-width:180px"><label class="sr-only" for="categoria">Categoría</label>
+    <select id="categoria" name="categoria">
+      <option value="">Todas las categorías</option>
+      {% for c in categorias %}<option {{ 'selected' if c == f.categoria }}>{{ c }}</option>{% endfor %}
+    </select></div>
+  <label class="check"><input type="checkbox" name="disp" value="1" {{ 'checked' if f.disp }}>Solo disponibles</label>
+  <button class="btn" type="submit"><i data-lucide="search"></i>Buscar</button>
+  {% if f.titulo or f.autor or f.isbn or f.categoria or f.disp %}<a class="btn ghost" href="{{ url_for('catalogo') }}">Limpiar</a>{% endif %}
+</form>
+
+{% if libros %}
+<div class="catalog">
+  {% for l in libros %}
+  {% set cat = (l.categorias or '').split(', ')[0] %}
+  <article class="book" style="--i: {{ loop.index0 }}">
+    <div class="cover-wrap">
+      <div class="cover" style="--c: {{ cat|color }}">
+        <div>
+          <div class="c-title">{{ l.titulo }}</div>
+          <div class="c-rule"></div>
+          <div class="c-author">{{ l.autores or 'Autor desconocido' }}</div>
+        </div>
+        <div class="c-foot"><span>{{ l.editorial or '' }}</span><span>{{ l.anio or '' }}</span></div>
+        {{ real_cover(l.isbn) }}
+      </div>
+    </div>
+    <div class="meta">
+      {% set total = l.total_ejemplares %}
+      <span class="avail {{ 'none' if not l.disponibles }}">
+        <span class="dots" aria-hidden="true">{% for i in range([total, 8]|min) %}<i class="{{ 'off' if i >= l.disponibles }}"></i>{% endfor %}</span>
+        {% if l.disponibles %}{{ l.disponibles }} de {{ total }} disponible{{ 's' if l.disponibles != 1 }}{% elif total %}Todos prestados{% else %}Sin ejemplares{% endif %}
+      </span>
+      <span class="code small">{{ l.isbn }}</span>
+    </div>
+    {% if l.categorias %}<div class="chips">{% for c in l.categorias.split(', ') %}<a class="chip" href="{{ url_for('catalogo', categoria=c) }}" style="text-decoration:none">{{ c }}</a>{% endfor %}</div>{% endif %}
+    {% if l.descripcion %}<p class="desc">{{ l.descripcion }}</p>{% endif %}
+    {% if auth.tipo == 'usuario' %}
+    <form method="post" action="{{ url_for('solicitar') }}">
+      <input type="hidden" name="isbn" value="{{ l.isbn }}">
+      <button class="btn {{ 'pri' if l.disponibles }}" type="submit" {{ 'disabled' if not l.disponibles }}>
+        <i data-lucide="{{ 'book-up' if l.disponibles else 'clock' }}"></i>{{ 'Solicitar préstamo' if l.disponibles else 'No disponible' }}</button>
+    </form>
+    {% else %}
+    <a class="btn sm" href="{{ url_for('libro_editar', isbn=l.isbn) }}"><i data-lucide="pencil"></i>Editar libro</a>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">{{ empty('search-x', 'No encontramos libros', 'Prueba con otra palabra o quita algún filtro.') }}</div>
+{% endif %}
+{% endblock %}

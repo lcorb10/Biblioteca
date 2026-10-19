@@ -1,0 +1,15 @@
+# Credenciales: nunca subirlas
+config.toml
+.streamlit/secrets.toml
+
+# Entornos virtuales y caché de Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

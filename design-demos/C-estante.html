@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dirección C · Estante</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#F2F1EE; --surface:#FFFFFF; --ink:#191718; --ink-2:#47423F; --ink-3:#736C67; --line:#E3E0DB;
+  --wine:#6E1F33; --wine-2:#88283F; --wine-tint:#F6E9EC;
+  --c-db:#1F6F78; --c-lit:#C08A1E; --c-prog:#3B4DA8; --c-sw:#7A4E9E;
+  --red:#B42318; --green:#1D7A46;
+}
+*{box-sizing:border-box;margin:0}
+::selection{background:var(--wine);color:#fff}
+body{font-family:"Schibsted Grotesk",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5;display:grid;grid-template-columns:76px 1fr;min-height:100vh}
+.num{font-variant-numeric:tabular-nums}
+aside{background:var(--ink);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--wine);display:grid;place-items:center;color:#fff;margin-bottom:18px}
+aside a{width:48px;height:48px;border-radius:10px;display:grid;place-items:center;color:#9C948F;transition:background .15s,color .15s}
+aside a svg{width:20px;height:20px;stroke-width:1.75}
+aside a:hover{background:#2A2627;color:#fff}
+aside a.on{background:#fff;color:var(--ink)}
+main{padding:32px 44px 60px;max-width:1240px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:26px}
+h1{font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.1}
+.sub{color:var(--ink-3);margin-top:6px}
+.btn{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:14px;font-weight:600;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;transition:background .15s}
+.btn svg{width:16px;height:16px}
+.btn.pri{background:var(--wine);border-color:var(--wine);color:#fff}
+.btn.pri:hover{background:var(--wine-2)}
+.btn.sm{padding:7px 12px;font-size:13px}
+.btn:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
+/* estante: cada ejemplar es un lomo */
+.shelf{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px 0;margin-bottom:26px;display:grid;grid-template-columns:1fr auto;gap:24px}
+.shelf h2{font-size:15px;font-weight:700}
+.shelf p{font-size:13px;color:var(--ink-3)}
+.books{display:flex;align-items:flex-end;gap:5px;height:118px;margin-top:14px;border-bottom:6px solid #CFC9C1;padding:0 6px}
+.sp{width:30px;border-radius:3px 3px 0 0;position:relative;display:flex;align-items:center;justify-content:center}
+.sp span{writing-mode:vertical-rl;transform:rotate(180deg);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;max-height:88%}
+.sp.out{opacity:.28}
+.sp.lost{background:repeating-linear-gradient(135deg,#DAD5CF 0 5px,#EDEAE6 5px 10px)!important}
+.sp.lost span{color:var(--ink-3)}
+.key{display:flex;flex-direction:column;gap:10px;justify-content:center;padding-bottom:22px;font-size:13px;color:var(--ink-2);min-width:180px}
+.key b{font-size:20px;font-weight:700;margin-right:6px;color:var(--ink)}
+.cols{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.card h2{font-size:17px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.loan{display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.cover{width:34px;height:46px;border-radius:2px 4px 4px 2px;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;box-shadow:inset 3px 0 0 rgba(0,0,0,.18)}
+.t{font-weight:600;line-height:1.3}
+.m{font-size:13px;color:var(--ink-3)}
+.late{font-size:13px;font-weight:700;color:var(--red);text-align:right}
+.late small{display:block;font-weight:500;color:var(--ink-3)}
+.fine{font-size:13px;color:var(--green);font-weight:600;text-align:right}
+.req{border-top:1px solid var(--line);padding-top:14px;margin-top:8px}
+.field{margin-top:12px}
+label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+select,input{font:inherit;font-size:14px;width:100%;padding:9px 12px;border:1px solid #D6D1CA;border-radius:10px;background:#fff;color:var(--ink)}
+.row{display:flex;gap:8px;margin-top:14px}
+.label{position:fixed;right:16px;bottom:16px;background:var(--ink);color:#fff;font-size:12px;padding:6px 10px;border-radius:6px}
+</style>
+</head>
+<body>
+<aside>
+  <div class="logo"><i data-lucide="library-big"></i></div>
+  <a href="#" title="Catálogo"><i data-lucide="search"></i></a>
+  <a href="#" title="Libros"><i data-lucide="book"></i></a>
+  <a href="#" title="Ejemplares"><i data-lucide="barcode"></i></a>
+  <a href="#" title="Usuarios"><i data-lucide="users"></i></a>
+  <a href="#" class="on" title="Préstamos"><i data-lucide="hand-helping"></i></a>
+  <a href="#" title="Devoluciones"><i data-lucide="undo-2"></i></a>
+  <a href="#" title="Reportes"><i data-lucide="chart-column"></i></a>
+</aside>
+<main>
+  <div class="head">
+    <div><h1>Préstamos</h1><p class="sub">Sábado 18 de octubre · 1 solicitud espera tu aprobación</p></div>
+    <button class="btn pri"><i data-lucide="plus"></i>Préstamo directo</button>
+  </div>
+
+  <section class="shelf">
+    <div>
+      <h2>El estante hoy</h2>
+      <p>Cada lomo es un ejemplar. Los atenuados están prestados; el rayado, perdido.</p>
+      <div class="books">
+        <div class="sp" style="height:104px;background:var(--c-db)"><span>Database System Concepts</span></div>
+        <div class="sp out" style="height:104px;background:var(--c-db)"><span>Database System Concepts</span></div>
+        <div class="sp" style="height:96px;background:var(--c-db)"><span>Fundamentals of DB Systems</span></div>
+        <div class="sp out" style="height:84px;background:var(--c-lit)"><span>Cien años de soledad</span></div>
+        <div class="sp" style="height:84px;background:var(--c-lit)"><span>Cien años de soledad</span></div>
+        <div class="sp" style="height:92px;background:var(--c-prog)"><span>Clean Code</span></div>
+        <div class="sp lost" style="height:92px"><span>Clean Code</span></div>
+      </div>
+    </div>
+    <div class="key">
+      <div><b class="num">4</b>disponibles</div>
+      <div><b class="num">2</b>prestados</div>
+      <div><b class="num">1</b>perdido</div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>En manos de lectores</h2>
+      <div class="loan">
+        <div class="cover" style="background:var(--c-db)">DB</div>
+        <div><div class="t">Database System Concepts</div><div class="m">Laura Pérez · EJ-0002 · vencía 13 oct</div></div>
+        <div class="late num">5 días tarde<small>$10.000</small></div>
+      </div>
+      <div class="loan">
+        <div class="cover" style="background:var(--c-lit)">CA</div>
+        <div><div class="t">Cien años de soledad</div><div class="m">Carlos Gómez · EJ-0004 · vence 23 oct</div></div>
+        <div class="fine">a tiempo</div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Espera aprobación</h2>
+      <div class="req">
+        <div class="t">Clean Code</div>
+        <div class="m">María Rodríguez, docente · pidió hace 2 horas</div>
+        <div class="field"><label>Entregar el ejemplar</label><select><option>EJ-0006 · Sala 1 / Estante C4</option></select></div>
+        <div class="field"><label>Devolver antes de</label><input class="num" value="25/10/2026"></div>
+        <div class="row"><button class="btn pri sm"><i data-lucide="check"></i>Aprobar préstamo</button><button class="btn sm">Rechazar</button></div>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="label">C · Estante — lomos de libros como datos</div>
+<script>lucide.createIcons()</script>
+</body>
+</html>

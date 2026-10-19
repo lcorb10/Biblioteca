@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dirección B · Mostrador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#FFFFFF; --bg-2:#F6F7F9; --ink:#0B0D12; --ink-2:#3D4350; --ink-3:#687080; --line:#E6E8EC;
+  --blue:#2340D8; --blue-2:#1A31B0; --blue-tint:#EDF0FD;
+  --red:#C62828; --red-tint:#FDECEC; --green:#17803D; --green-tint:#E8F5EC;
+}
+*{box-sizing:border-box;margin:0}
+::selection{background:var(--blue);color:#fff}
+body{font-family:Geist,system-ui,sans-serif;background:var(--bg-2);color:var(--ink);font-size:14px;line-height:1.5}
+.num{font-family:"Geist Mono",monospace;font-variant-numeric:tabular-nums}
+.top{background:var(--bg);border-bottom:1px solid var(--line);height:56px;display:flex;align-items:center;padding:0 28px;gap:28px;position:sticky;top:0}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.brand i{display:grid;place-items:center;width:26px;height:26px;background:var(--blue);color:#fff;border-radius:6px}
+.brand svg{width:15px;height:15px}
+nav{display:flex;height:100%}
+nav a{display:flex;align-items:center;padding:0 12px;color:var(--ink-3);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;transition:color .15s}
+nav a:hover{color:var(--ink)}
+nav a.on{color:var(--ink);border-bottom-color:var(--blue)}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:260px;color:var(--ink-3)}
+.search svg{width:15px;height:15px}
+.search kbd{margin-left:auto;font-family:"Geist Mono";font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:28px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+h1{font-size:24px;font-weight:600;letter-spacing:-.025em}
+.btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:500;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;transition:background .15s}
+.btn svg{width:15px;height:15px}
+.btn:hover{background:var(--bg-2)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.pri:hover{background:var(--blue-2)}
+.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+.panel{background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.panel>header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+h2{font-size:14px;font-weight:600}
+.seg{display:flex;background:var(--bg-2);border-radius:7px;padding:2px}
+.seg button{font:inherit;font-size:13px;border:0;background:transparent;padding:4px 10px;border-radius:5px;color:var(--ink-3);cursor:pointer}
+.seg button.on{background:var(--bg);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;font-weight:500;color:var(--ink-3);padding:9px 16px;border-bottom:1px solid var(--line)}
+td{padding:11px 16px;border-bottom:1px solid var(--line)}
+tr:last-child td{border:0}
+tbody tr:hover{background:#FAFBFC}
+.r{text-align:right}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:2px 8px;border-radius:99px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.late{color:var(--red);background:var(--red-tint)}
+.pill.ok{color:var(--green);background:var(--green-tint)}
+.t{font-weight:500}
+.m{color:var(--ink-3);font-size:12.5px}
+.queue{padding:6px}
+.q{padding:12px;border-radius:8px}
+.q+.q{border-top:1px solid var(--line)}
+.q .row{display:flex;gap:8px;margin-top:10px}
+select,input{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.stats div{background:var(--bg);padding:12px 16px}
+.stats span{display:block;font-size:12px;color:var(--ink-3)}
+.stats strong{font-size:18px;font-weight:600}
+.stats .bad strong{color:var(--red)}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:4px 16px 14px;gap:2px}
+.legend{display:flex;gap:14px;padding:12px 16px 0;font-size:12px;color:var(--ink-2)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.label{position:fixed;right:16px;bottom:16px;background:var(--ink);color:#fff;font-size:12px;padding:6px 10px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><i><svg data-lucide="book-open"></svg></i>Biblioteca</div>
+  <nav>
+    <a href="#">Catálogo</a><a href="#">Libros</a><a href="#">Ejemplares</a><a href="#">Usuarios</a>
+    <a href="#" class="on">Préstamos</a><a href="#">Devoluciones</a><a href="#">Reportes</a>
+  </nav>
+  <div class="search"><i data-lucide="search"></i>Buscar título, ISBN, usuario<kbd>/</kbd></div>
+  <div class="av">AG</div>
+</div>
+<main>
+  <div class="head">
+    <h1>Préstamos</h1>
+    <div style="display:flex;gap:8px"><button class="btn"><i data-lucide="download"></i>Exportar</button><button class="btn pri"><i data-lucide="plus"></i>Préstamo directo</button></div>
+  </div>
+  <div class="grid">
+    <section class="panel">
+      <header><h2>Préstamos activos</h2><div class="seg"><button class="on">Todos 2</button><button>Vencidos 1</button><button>Vigentes 1</button></div></header>
+      <table>
+        <thead><tr><th>Libro</th><th>Usuario</th><th>Ejemplar</th><th>Vence</th><th>Estado</th><th class="r">Multa</th></tr></thead>
+        <tbody>
+          <tr><td><div class="t">Database System Concepts</div><div class="m num">9780078022159</div></td><td>Laura Pérez<div class="m">Ing. de Sistemas</div></td><td class="num">EJ-0002</td><td class="num">13 oct</td><td><span class="pill late">Vencido 5 d</span></td><td class="r num" style="color:var(--red);font-weight:600">$10.000</td></tr>
+          <tr><td><div class="t">Cien años de soledad</div><div class="m num">9780307474728</div></td><td>Carlos Gómez<div class="m">Ing. Industrial</div></td><td class="num">EJ-0004</td><td class="num">23 oct</td><td><span class="pill ok">Vigente</span></td><td class="r num m">—</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <div style="display:grid;gap:20px">
+      <section class="panel">
+        <header><h2>Por aprobar</h2><span class="m">1 solicitud</span></header>
+        <div class="queue">
+          <div class="q">
+            <div class="t">Clean Code</div>
+            <div class="m">María Rodríguez · docente · hace 2 h</div>
+            <div class="row"><select><option>EJ-0006 · C4</option></select><input class="num" value="25/10" style="width:90px"></div>
+            <div class="row"><button class="btn pri" style="flex:1;justify-content:center"><i data-lucide="check"></i>Aprobar</button><button class="btn">Rechazar</button></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <header><h2>Inventario</h2><span class="m num">7 ejemplares</span></header>
+        <div class="legend"><span><i style="background:var(--blue)"></i>Disponible 4</span><span><i style="background:#9AA6F0"></i>Prestado 2</span><span><i style="background:var(--red)"></i>Perdido 1</span></div>
+        <div class="bar" style="margin-top:10px"><div style="flex:4;background:var(--blue)"></div><div style="flex:2;background:#9AA6F0"></div><div style="flex:1;background:var(--red)"></div></div>
+        <div class="stats"><div><span>Activos</span><strong class="num">2</strong></div><div class="bad"><span>Vencidos</span><strong class="num">1</strong></div></div>
+      </section>
+    </div>
+  </div>
+</main>
+<div class="label">B · Mostrador — suizo, denso, operativo</div>
+<script>lucide.createIcons()</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado, delete_form %}
+{% block title %}{{ 'Nuevo libro' if nuevo else libro.titulo }}{% endblock %}
+
+{% macro tokens(name, label, valor, sugeridos, hint) -%}
+<div class="field" data-tokens>
+  <label for="{{ name }}-in">{{ label }}</label>
+  <input type="hidden" name="{{ name }}" value="{{ valor or '' }}">
+  <div class="tokens"><input type="text" id="{{ name }}-in" placeholder="Escribe y pulsa Enter" autocomplete="off"></div>
+  <div class="hint">{{ hint }}</div>
+  {% if sugeridos %}<div class="suggest">{% for s in sugeridos %}<button type="button">{{ s }}</button>{% endfor %}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% block content %}
+<a class="crumb" href="{{ url_for('libros') }}"><i data-lucide="chevron-left"></i>Libros</a>
+<div class="head">
+  <div><h1>{{ 'Nuevo libro' if nuevo else 'Editar libro' }}</h1>
+    <p class="sub">{{ 'Registra un título; luego podrás agregarle ejemplares físicos.' if nuevo else 'El ISBN no se puede cambiar porque identifica al libro.' }}</p></div>
+</div>
+
+<div class="grid-2">
+  <form method="post" class="card form" id="libro-form">
+    <div class="row">
+      <div class="field"><label for="isbn">ISBN</label>
+        <input type="text" id="isbn" name="isbn" value="{{ libro.isbn or '' }}" {{ 'required' if nuevo else 'disabled' }} maxlength="20" inputmode="numeric" placeholder="9780132350884"></div>
+      <div class="field"><label for="anio">Año <span class="opt">(opcional)</span></label>
+        <input type="number" id="anio" name="anio" min="1400" max="{{ hoy.year }}" value="{{ libro.anio or '' }}"></div>
+    </div>
+    <div class="field"><label for="titulo">Título</label>
+      <input type="text" id="titulo" name="titulo" value="{{ libro.titulo or '' }}" required maxlength="200"></div>
+    <div class="field"><label for="editorial">Editorial <span class="opt">(opcional)</span></label>
+      <input type="text" id="editorial" name="editorial" list="editoriales" value="{{ libro.editorial or '' }}" maxlength="100">
+      <datalist id="editoriales">{% for e in editoriales %}<option value="{{ e }}">{% endfor %}</datalist>
+      <div class="hint">Elige una existente o escribe una nueva; se crea automáticamente.</div></div>
+    {{ tokens('autores', 'Autores', libro.autores, autores, 'Al menos uno. Un libro puede tener varios autores.') }}
+    {{ tokens('categorias', 'Categorías / temas', libro.categorias, categorias, 'Determinan el color del lomo en el estante.') }}
+    <div class="field"><label for="descripcion">Descripción <span class="opt">(opcional)</span></label>
+      <textarea id="descripcion" name="descripcion" maxlength="2000">{{ libro.descripcion or '' }}</textarea></div>
+    <div class="form-actions">
+      <a class="btn ghost" href="{{ url_for('libros') }}">Cancelar</a>
+      <button class="btn pri" type="submit"><i data-lucide="check"></i>{{ 'Crear libro' if nuevo else 'Guardar cambios' }}</button>
+    </div>
+  </form>
+
+  <div class="stack">
+    <section class="card">
+      <h3 style="margin-bottom:4px">Así se verá en el catálogo</h3>
+      <p class="muted small" style="margin-bottom:14px" id="pv-note">Si el ISBN tiene portada en Open Library se muestra la real; si no, se genera una con los datos del libro.</p>
+      <div class="cover-wrap" style="max-width:240px;margin:0 auto">
+        <div class="cover" id="pv-cover" style="--c: {{ ((libro.categorias or '').split(', ')[0])|color }}">
+          <div><div class="c-title" id="pv-title">{{ libro.titulo or 'Título del libro' }}</div><div class="c-rule"></div>
+            <div class="c-author" id="pv-author">{{ libro.autores or 'Autores' }}</div></div>
+          <div class="c-foot"><span id="pv-ed">{{ libro.editorial or '' }}</span><span id="pv-year">{{ libro.anio or '' }}</span></div>
+          <img class="real" id="pv-real" alt="" {% if libro.isbn %}src="https://covers.openlibrary.org/b/isbn/{{ libro.isbn }}-L.jpg?default=false"{% endif %}
+               onload="this.naturalWidth > 10 ? this.classList.add('ok') : this.classList.remove('ok')" onerror="this.classList.remove('ok')">
+        </div>
+      </div>
+    </section>
+
+    {% if not nuevo %}
+    <section class="card">
+      <header><h3>Ejemplares</h3><a class="btn sm" href="{{ url_for('ejemplar_nuevo', isbn=libro.isbn) }}"><i data-lucide="plus"></i>Agregar</a></header>
+      {% for e in ejemplares %}
+      <div class="loan" style="grid-template-columns:1fr auto">
+        <div><div class="t code">{{ e.codigo_barras }}</div><div class="m">{{ e.ubicacion }}</div></div>
+        <a href="{{ url_for('ejemplar_editar', id_ejemplar=e.id_ejemplar) }}" style="text-decoration:none">{{ estado(e.estado) }}</a>
+      </div>
+      {% else %}<p class="muted small">Este libro aún no tiene ejemplares físicos.</p>{% endfor %}
+    </section>
+    <section class="card">
+      <h3>Zona de cuidado</h3>
+      <p class="muted small" style="margin:4px 0 12px">Eliminar el libro borra sus autores y categorías asociados. No se permite si tiene ejemplares o préstamos.</p>
+      {{ delete_form(url_for('libro_eliminar', isbn=libro.isbn), '¿Eliminar «' ~ libro.titulo ~ '»?', 'Esta acción no se puede deshacer.') }}
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const $ = (id) => document.getElementById(id);
+  const bind = (src, dst, fallback) => {
+    const el = typeof src === "string" ? $(src) : src;
+    const upd = () => ($(dst).textContent = el.value || fallback);
+    el.addEventListener("input", upd);
+    new MutationObserver(upd).observe(el, { attributes: true });
+  };
+  bind("titulo", "pv-title", "Título del libro");
+  bind("editorial", "pv-ed", "");
+  bind("anio", "pv-year", "");
+  const isbn = $("isbn"), real = $("pv-real");
+  let t;
+  isbn.addEventListener("input", () => {
+    clearTimeout(t);
+    const v = isbn.value.replace(/[^0-9Xx]/g, "");
+    real.classList.remove("ok");
+    if (v.length === 10 || v.length === 13)
+      t = setTimeout(() => (real.src = `https://covers.openlibrary.org/b/isbn/${v}-L.jpg?default=false`), 400);
+  });
+  const autores = document.querySelector("input[name=autores]");
+  setInterval(() => ($("pv-author").textContent = autores.value || "Autores"), 400);
+});
+</script>
+{% endblock %}

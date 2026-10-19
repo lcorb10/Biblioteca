@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import shelf, mini_cover, legend, empty %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<div class="head">
+  <div>
+    <h1>Hola, {{ auth.nombre.split()[0] }}</h1>
+    <p class="sub">{{ hoy_largo }} ·
+      {% if r.solicitudes %}{{ r.solicitudes }} solicitud{{ 'es' if r.solicitudes != 1 }} espera{{ 'n' if r.solicitudes != 1 }} tu aprobación{% else %}no hay solicitudes pendientes{% endif %}</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('devoluciones') }}"><i data-lucide="undo-2"></i>Registrar devolución</a>
+    <a class="btn pri" href="{{ url_for('prestamo_nuevo') }}"><i data-lucide="plus"></i>Préstamo directo</a>
+  </div>
+</div>
+
+<div class="stats">
+  <a class="stat wine" href="{{ url_for('prestamos') }}"><span>Solicitudes por aprobar</span><b data-count="{{ r.solicitudes }}">{{ r.solicitudes }}</b></a>
+  <a class="stat" href="{{ url_for('prestamos') }}"><span>Préstamos activos</span><b data-count="{{ r.activos }}">{{ r.activos }}</b></a>
+  <a class="stat {{ 'bad' if r.vencidos }}" href="{{ url_for('prestamos', filtro='vencidos') }}"><span>Vencidos</span><b data-count="{{ r.vencidos }}">{{ r.vencidos }}</b></a>
+  <div class="stat"><span>Multa por día de retraso</span><b>{{ r.tarifa|dinero }}</b></div>
+</div>
+
+<section class="card shelf-card">
+  <div>
+    <h2>El estante hoy</h2>
+    <p class="muted small">Cada lomo es un ejemplar, con el color de su categoría. Los atenuados están prestados y los rayados, perdidos. Pasa el cursor para ver cuál es.</p>
+    {% if libros %}{{ shelf(libros) }}{% else %}<p class="shelf-empty">Aún no hay ejemplares. <a href="{{ url_for('ejemplar_nuevo') }}">Agrega el primero</a>.</p>{% endif %}
+  </div>
+  {{ legend(r.inventario) }}
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <header><h2>Vencidos</h2><a class="btn sm ghost" href="{{ url_for('prestamos', filtro='vencidos') }}">Ver todos<i data-lucide="chevron-right"></i></a></header>
+    {% for p in vencidos %}
+    <div class="loan">
+      {{ mini_cover(p.titulo, p.categoria, p.isbn) }}
+      <div><div class="t">{{ p.titulo }}</div><div class="m">{{ p.usuario }} · {{ p.codigo_barras }} · vencía el {{ p.fecha_vencimiento|fecha }}</div></div>
+      <div class="late">{{ p.dias_retraso }} día{{ 's' if p.dias_retraso != 1 }} tarde<small>{{ p.multa_estimada|dinero }}</small></div>
+    </div>
+    {% else %}
+    {{ empty('party-popper', 'Nada vencido', 'Todos los préstamos están al día.') }}
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <header><h2>Esperan aprobación</h2><a class="btn sm ghost" href="{{ url_for('prestamos') }}">Atender<i data-lucide="chevron-right"></i></a></header>
+    {% for s in solicitudes %}
+    <div class="loan">
+      {{ mini_cover(s.titulo, s.categoria, s.isbn) }}
+      <div><div class="t">{{ s.titulo }}</div><div class="m">{{ s.nombres }}, {{ s.rol }} · {{ s.fecha_solicitud|hace }}</div></div>
+      {% if s.ejemplares %}<span class="badge-s ok">{{ s.ejemplares|length }} disp.</span>{% else %}<span class="badge-s bad">Sin ejemplar</span>{% endif %}
+    </div>
+    {% else %}
+    {{ empty('inbox', 'Bandeja vacía', 'Cuando un lector pida un libro aparecerá aquí.') }}
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

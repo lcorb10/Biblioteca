@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import estado %}
+{% block title %}Historial de {{ u.nombres }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('usuarios') }}"><i data-lucide="chevron-left"></i>Usuarios</a>
+<div class="head">
+  <div style="display:flex;gap:16px;align-items:center">
+    <div class="avatar" style="background:{{ u.nombres|color }};width:56px;height:56px;font-size:18px">{{ u.nombres|iniciales }}</div>
+    <div><h1>{{ u.nombres }}</h1>
+      <p class="sub">{{ u.rol|capitalize }}{% if u.carrera %} · {{ u.carrera }}{% endif %} · <span class="code">{{ u.codigo }}</span> · {{ estado(u.estado) }}</p></div>
+  </div>
+  <div class="actions"><a class="btn" href="{{ url_for('usuario_editar', id_usuario=u.id_usuario) }}"><i data-lucide="pencil"></i>Editar</a></div>
+</div>
+
+{% set prestados = historial|selectattr('estado', 'in', ['activo', 'devuelto'])|list %}
+<div class="stats">
+  <div class="stat"><span>Préstamos en total</span><b data-count="{{ prestados|length }}">{{ prestados|length }}</b></div>
+  <div class="stat"><span>En préstamo ahora</span><b>{{ historial|selectattr('estado', 'equalto', 'activo')|list|length }}</b></div>
+  <div class="stat"><span>Solicitudes pendientes</span><b>{{ historial|selectattr('estado', 'equalto', 'solicitado')|list|length }}</b></div>
+  <div class="stat bad"><span>Multas acumuladas</span><b>{{ historial|map(attribute='multa')|map('float')|sum|dinero }}</b></div>
+</div>
+
+<section class="card">
+  <header><h2>Historial de préstamos</h2></header>
+  {% with vacio_titulo='Sin préstamos todavía', vacio_texto='Cuando este usuario pida un libro aparecerá aquí.', vacio_accion=none, vacio_href='#' %}
+  {% include "_historial.html" %}
+  {% endwith %}
+</section>
+{% endblock %}

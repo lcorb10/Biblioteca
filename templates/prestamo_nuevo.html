@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Préstamo directo{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('prestamos') }}"><i data-lucide="chevron-left"></i>Préstamos</a>
+<div class="head">
+  <div><h1>Préstamo directo</h1>
+    <p class="sub">Para cuando el lector está en el mostrador. Se valida que esté activo y que el ejemplar esté disponible.</p></div>
+</div>
+
+<div class="grid-2">
+  <form method="post" class="card form">
+    {% if not ejemplares %}<div class="warn-line"><i data-lucide="book-x"></i>No hay ejemplares disponibles en este momento.</div>{% endif %}
+    <div class="field"><label for="id_usuario">Lector</label>
+      <select id="id_usuario" name="id_usuario" required>
+        <option value="">Selecciona un usuario…</option>
+        {% for u in usuarios %}<option value="{{ u.id_usuario }}" {{ 'disabled' if u.estado != 'activo' }}>{{ u.nombres }} · {{ u.codigo }}{{ ' (bloqueado)' if u.estado != 'activo' }}</option>{% endfor %}
+      </select>
+      <div class="hint">Los usuarios bloqueados aparecen deshabilitados.</div></div>
+    <div class="field"><label for="id_ejemplar">Ejemplar disponible</label>
+      <select id="id_ejemplar" name="id_ejemplar" required>
+        <option value="">Selecciona un ejemplar…</option>
+        {% for e in ejemplares %}<option value="{{ e.id_ejemplar }}">{{ e.titulo }} · {{ e.codigo_barras }} · {{ e.ubicacion }}</option>{% endfor %}
+      </select></div>
+    <div class="row">
+      <div class="field"><label for="fecha_prestamo">Fecha de préstamo</label>
+        <input type="date" id="fecha_prestamo" name="fecha_prestamo" value="{{ hoy.isoformat() }}" max="{{ hoy.isoformat() }}"></div>
+      <div class="field"><label for="fecha_vencimiento">Vence</label>
+        <input type="date" id="fecha_vencimiento" name="fecha_vencimiento" value="{{ venc_default.isoformat() }}" min="{{ hoy.isoformat() }}" required>
+        <div class="hint">Por defecto, {{ dias }} días.</div></div>
+    </div>
+    <div class="form-actions">
+      <a class="btn ghost" href="{{ url_for('prestamos') }}">Cancelar</a>
+      <button class="btn pri" type="submit" {{ 'disabled' if not ejemplares }}><i data-lucide="book-up"></i>Registrar préstamo</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

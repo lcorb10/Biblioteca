@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Mis libros{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Mis libros</h1>
+    <p class="sub">Tus solicitudes y préstamos. Si devuelves tarde, la multa es de {{ tarifa|dinero }} por día.</p></div>
+  <div class="actions"><a class="btn pri" href="{{ url_for('catalogo', disp=1) }}"><i data-lucide="search"></i>Buscar libros disponibles</a></div>
+</div>
+
+{% set activos = historial|selectattr('estado', 'equalto', 'activo')|list %}
+{% set vencidos = activos|selectattr('fecha_vencimiento', 'lt', hoy)|list %}
+<div class="stats">
+  <div class="stat"><span>En tus manos</span><b data-count="{{ activos|length }}">{{ activos|length }}</b></div>
+  <div class="stat {{ 'bad' if vencidos }}"><span>Vencidos</span><b>{{ vencidos|length }}</b></div>
+  <div class="stat wine"><span>Esperando aprobación</span><b>{{ historial|selectattr('estado', 'equalto', 'solicitado')|list|length }}</b></div>
+  <div class="stat"><span>Leídos y devueltos</span><b>{{ historial|selectattr('estado', 'equalto', 'devuelto')|list|length }}</b></div>
+</div>
+
+<section class="card">
+  {% with vacio_titulo='Aún no has pedido libros', vacio_texto='Explora el catálogo y solicita tu primer préstamo.', vacio_accion='Ir al catálogo', vacio_href=url_for('catalogo') %}
+  {% include "_historial.html" %}
+  {% endwith %}
+</section>
+{% endblock %}

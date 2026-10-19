@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_macros.html" import shelf, mini_cover, estado, empty, legend %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Reportes</h1><p class="sub">Lo que pasa en la biblioteca, al día de hoy.</p></div>
+  <div class="actions"><button class="btn" type="button" onclick="print()"><i data-lucide="printer"></i>Imprimir</button></div>
+</div>
+
+<nav class="subnav" aria-label="Secciones">
+  <a href="#activos">Activos y vencidos</a>
+  <a href="#mas-prestados">Libros más prestados</a>
+  <a href="#usuarios">Usuarios con más préstamos</a>
+  <a href="#inventario">Inventario por estado</a>
+</nav>
+
+<section id="activos" class="table-wrap" style="margin-bottom:22px">
+  <header>
+    <h2>Préstamos activos y vencidos</h2>
+    <div style="display:flex;gap:8px">{{ estado('vigente', (activos|length) ~ ' activos') }}{{ estado('bad', vencidos ~ ' vencidos') }}</div>
+  </header>
+  {% if activos %}
+  <table>
+    <thead><tr><th>Libro</th><th>Lector</th><th>Prestado</th><th>Vence</th><th>Situación</th><th style="text-align:right">Multa estimada</th></tr></thead>
+    <tbody>
+    {% for p in activos %}
+    <tr>
+      <td><div class="cell-book">{{ mini_cover(p.titulo, p.categoria, p.isbn) }}<div><div class="t">{{ p.titulo }}</div><div class="m code">{{ p.codigo_barras }}</div></div></div></td>
+      <td>{{ p.usuario }}</td>
+      <td class="code">{{ p.fecha_prestamo|fecha }}</td>
+      <td class="code">{{ p.fecha_vencimiento|fecha }}</td>
+      <td>{% if p.dias_retraso %}{{ estado('bad', 'Vencido · ' ~ p.dias_retraso ~ ' d') }}{% else %}{{ estado('vigente', 'Vigente') }}{% endif %}</td>
+      <td style="text-align:right" class="{{ 'money-bad' if p.dias_retraso }}">{{ p.multa_estimada|dinero if p.dias_retraso else '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    {% if vencidos %}
+    <tfoot><tr><td colspan="5" style="text-align:right;font-weight:600">Total por cobrar si se devuelven hoy</td>
+      <td style="text-align:right" class="money-bad">{{ activos|map(attribute='multa_estimada')|map('float')|sum|dinero }}</td></tr></tfoot>
+    {% endif %}
+  </table>
+  {% else %}{{ empty('book-check', 'No hay préstamos activos') }}{% endif %}
+</section>
+
+<div class="grid-2 even" style="margin-bottom:22px">
+  <section id="mas-prestados" class="card">
+    <header>
+      <div><h2>Libros más prestados</h2><p>Del {{ ini|fecha }} al {{ fin|fecha }}</p></div>
+    </header>
+    <form method="get" class="form" style="grid-template-columns:1fr 1fr auto;align-items:end;margin-bottom:18px;display:grid;gap:10px">
+      <div class="field"><label for="desde">Desde</label><input type="date" id="desde" name="desde" value="{{ ini.isoformat() }}"></div>
+      <div class="field"><label for="hasta">Hasta</label><input type="date" id="hasta" name="hasta" value="{{ fin.isoformat() }}"></div>
+      <button class="btn" type="submit"><i data-lucide="filter"></i>Ver</button>
+    </form>
+    {% if top_libros %}
+    {% set mx = top_libros[0].prestamos %}
+    <div class="hbars">
+      {% for b in top_libros %}
+      <div class="hbar">
+        <div class="lab">{{ b.titulo }}<small class="code">{{ b.isbn }}</small></div>
+        <div class="track"><div class="fill" style="--w: {{ (b.prestamos / mx * 100)|round(1) }}%; --c: {{ (b.categoria or b.titulo)|color }}; --i: {{ loop.index0 }}"></div></div>
+        <div class="val">{{ b.prestamos }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('calendar-x', 'Sin préstamos en este periodo', 'Amplía el rango de fechas.') }}{% endif %}
+  </section>
+
+  <section id="usuarios" class="card">
+    <header><div><h2>Usuarios con más préstamos</h2><p>Préstamos aprobados de todos los tiempos</p></div></header>
+    {% if top_usuarios %}
+    {% set mx = top_usuarios[0].prestamos %}
+    <div class="hbars">
+      {% for u in top_usuarios %}
+      <div class="hbar" style="grid-template-columns:26px minmax(120px, 190px) 1fr 34px">
+        <span class="rank {{ 'r1' if loop.first }}">{{ loop.index }}</span>
+        <div class="lab">{{ u.nombres }}<small>{{ u.rol|capitalize }} · <span class="code">{{ u.codigo }}</span></small></div>
+        <div class="track"><div class="fill" style="--w: {{ (u.prestamos / mx * 100)|round(1) }}%; --c: var(--wine); --i: {{ loop.index0 }}; opacity: {{ 1 - loop.index0 * 0.07 }}"></div></div>
+        <div class="val">{{ u.prestamos }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('users', 'Sin datos todavía') }}{% endif %}
+  </section>
+</div>
+
+{% set total = inv.disponible + inv.prestado + inv.perdido %}
+<section id="inventario" class="card shelf-card">
+  <div>
+    <h2>Inventario por estado</h2>
+    <p class="muted small">{{ total }} ejemplares en total.</p>
+    {% if total %}
+    <div class="inv-bar" role="img" aria-label="{{ inv.disponible }} disponibles, {{ inv.prestado }} prestados, {{ inv.perdido }} perdidos">
+      <div style="flex: {{ inv.disponible }}; background: var(--green)"></div>
+      <div style="flex: {{ inv.prestado }}; background: var(--amber); animation-delay:.35s"></div>
+      <div style="flex: {{ inv.perdido }}; background: var(--red); animation-delay:.5s"></div>
+    </div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
+      <span>{{ estado('disponible') }} {{ (inv.disponible / total * 100)|round|int }}%</span>
+      <span>{{ estado('prestado') }} {{ (inv.prestado / total * 100)|round|int }}%</span>
+      <span>{{ estado('perdido') }} {{ (inv.perdido / total * 100)|round|int }}%</span>
+    </div>
+    {{ shelf(libros) }}
+    {% else %}<p class="shelf-empty">No hay ejemplares registrados.</p>{% endif %}
+  </div>
+  {{ legend(inv) }}
+</section>
+{% endblock %}

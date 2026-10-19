@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mini_cover, empty, delete_form %}
+{% block title %}Libros{% endblock %}
+{% block content %}
+<div class="head">
+  <div><h1>Libros</h1><p class="sub">Títulos del catálogo, con sus autores, categorías y ejemplares.</p></div>
+  <div class="actions"><a class="btn pri" href="{{ url_for('libro_nuevo') }}"><i data-lucide="plus"></i>Nuevo libro</a></div>
+</div>
+
+<div class="table-wrap">
+  <header>
+    <form method="get" class="search-field" style="max-width:380px">
+      <label class="sr-only" for="q">Buscar libro</label>
+      <i data-lucide="search"></i><input type="search" id="q" name="q" placeholder="Buscar por título" value="{{ q }}" data-live=".table-wrap table">
+    </form>
+    <span class="muted small">{{ libros|length }} título{{ 's' if libros|length != 1 }}</span>
+  </header>
+  {% if libros %}
+  <table>
+    <thead><tr><th>Libro</th><th>Autores</th><th>Editorial · año</th><th>Categorías</th><th>Ejemplares</th><th></th></tr></thead>
+    <tbody>
+    {% for l in libros %}
+      <tr>
+        <td><div class="cell-book">{{ mini_cover(l.titulo, (l.categorias or '').split(', ')[0], l.isbn) }}
+          <div><div class="t">{{ l.titulo }}</div><div class="m code">{{ l.isbn }}</div></div></div></td>
+        <td>{{ l.autores or '—' }}</td>
+        <td>{{ l.editorial or '—' }}<div class="m">{{ l.anio or '' }}</div></td>
+        <td>{% for c in (l.categorias or '').split(', ') if c %}<span class="chip">{{ c }}</span> {% endfor %}</td>
+        <td><b>{{ l.disponibles }}</b><span class="muted"> / {{ l.total_ejemplares }} disp.</span></td>
+        <td class="actions">
+          <a class="btn sm" href="{{ url_for('libro_editar', isbn=l.isbn) }}"><i data-lucide="pencil"></i>Editar</a>
+          {{ delete_form(url_for('libro_eliminar', isbn=l.isbn), '¿Eliminar «' ~ l.titulo ~ '»?', 'Solo se puede eliminar si no tiene ejemplares ni préstamos registrados.') }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {{ empty('book-dashed', 'No hay libros' ~ (' con «' ~ q ~ '»' if q else ''), 'Agrega el primer título del catálogo.', 'Nuevo libro', url_for('libro_nuevo')) }}
+  {% endif %}
+</div>
+{% endblock %}

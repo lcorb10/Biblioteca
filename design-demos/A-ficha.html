@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dirección A · Ficha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --paper:#F5F5F0; --card:#FFFFFF; --ink:#1B2A24; --ink-2:#4A5A53; --ink-3:#6B7A73;
+  --green:#1E4636; --green-2:#2D6A50; --green-tint:#E4EDE8;
+  --rule:#D9E1EA; --rule-red:#C8463C; --stamp:#B3261E; --stamp-tint:#FBEAE8;
+  --amber:#8A5A00; --amber-tint:#FBF1DC; --line:#E2E2DA;
+}
+*{box-sizing:border-box;margin:0}
+::selection{background:var(--green);color:#fff}
+body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5;display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+aside{background:var(--green);color:#E8F0EC;padding:24px 14px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 10px 22px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand svg{width:22px;height:22px}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;color:#C9DAD1;text-decoration:none;font-weight:500;font-size:14px;transition:background .15s}
+nav a svg{width:17px;height:17px;stroke-width:1.75}
+nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+nav a.on{background:#F5F5F0;color:var(--green)}
+.who{margin-top:auto;padding:12px 10px;border-top:1px solid rgba(255,255,255,.12);font-size:13px;color:#C9DAD1}
+.who b{display:block;color:#fff;font-weight:600}
+main{padding:32px 40px 60px;max-width:1180px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.sub{color:var(--ink-3);margin-top:2px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px}
+.btn{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:14px;font-weight:600;padding:9px 14px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s}
+.btn svg{width:16px;height:16px}
+.btn:hover{border-color:#C4C4BA}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.pri:hover{background:var(--green-2)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--stamp)}
+.btn.ghost:hover{background:var(--stamp-tint)}
+.btn:focus-visible,select:focus-visible{outline:2px solid var(--green-2);outline-offset:2px}
+.counts{display:flex;gap:0;border:1px solid var(--line);background:var(--card);border-radius:8px;margin-bottom:28px}
+.counts div{flex:1;padding:14px 18px;border-right:1px solid var(--line)}
+.counts div:last-child{border:0}
+.counts span{display:block;font-size:13px;color:var(--ink-3)}
+.counts strong{font-size:22px;font-weight:600}
+.counts .warn strong{color:var(--stamp)}
+h2{font-size:17px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h2 .n{font-size:12px;font-weight:600;background:var(--green-tint);color:var(--green);padding:1px 8px;border-radius:99px}
+/* ficha bibliográfica */
+.ficha{background:var(--card);border:1px solid var(--line);border-radius:4px;position:relative;
+  background-image:repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px);background-position:0 54px;padding:0 22px 6px;margin-bottom:32px;box-shadow:0 1px 2px rgba(27,42,36,.05),0 6px 16px -8px rgba(27,42,36,.12)}
+.ficha header{height:54px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--rule-red);background:var(--card)}
+.ficha header .mono{font-size:13px;color:var(--ink-3)}
+.req{display:grid;grid-template-columns:1.6fr 1fr 1fr auto;gap:18px;align-items:center;min-height:96px;padding:14px 0;border-bottom:1px solid var(--rule)}
+.req:last-child{border:0}
+.req .t{font-weight:600}
+.req .m{font-size:13px;color:var(--ink-3)}
+label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+select,input{font:inherit;font-size:14px;width:100%;padding:8px 10px;border:1px solid #CFCFC5;border-radius:6px;background:#fff;color:var(--ink)}
+.acts{display:flex;gap:6px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--ink-3);padding:10px 14px;border-bottom:2px solid var(--rule-red);background:#FBFBF8}
+td{padding:12px 14px;border-bottom:1px solid var(--rule);font-size:14px;vertical-align:middle}
+tr:last-child td{border:0}
+tbody tr:hover{background:#FAFBF9}
+.r{text-align:right}
+.stamp{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--stamp);border:1.5px solid var(--stamp);border-radius:3px;padding:1px 7px;transform:rotate(-2deg)}
+.ok{display:inline-block;font-size:12px;font-weight:600;color:var(--green);background:var(--green-tint);border-radius:99px;padding:2px 9px}
+.fine{color:var(--stamp);font-weight:600}
+.dim{color:var(--ink-3)}
+.label{position:fixed;right:16px;bottom:16px;background:var(--ink);color:#fff;font-size:12px;padding:6px 10px;border-radius:6px}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><i data-lucide="library"></i>Biblioteca</div>
+  <nav>
+    <a href="#"><i data-lucide="search"></i>Catálogo</a>
+    <a href="#"><i data-lucide="book"></i>Libros</a>
+    <a href="#"><i data-lucide="barcode"></i>Ejemplares</a>
+    <a href="#"><i data-lucide="users"></i>Usuarios</a>
+    <a href="#" class="on"><i data-lucide="hand-helping"></i>Préstamos</a>
+    <a href="#"><i data-lucide="undo-2"></i>Devoluciones</a>
+    <a href="#"><i data-lucide="chart-column"></i>Reportes</a>
+  </nav>
+  <div class="who"><b>Administrador General</b>administrador</div>
+</aside>
+<main>
+  <div class="head">
+    <div><h1>Préstamos</h1><p class="sub">Aprueba solicitudes y vigila los vencimientos del día.</p></div>
+    <button class="btn pri"><i data-lucide="plus"></i>Préstamo directo</button>
+  </div>
+
+  <div class="counts">
+    <div><span>Solicitudes por aprobar</span><strong class="mono">1</strong></div>
+    <div><span>Préstamos activos</span><strong class="mono">2</strong></div>
+    <div class="warn"><span>Vencidos</span><strong class="mono">1</strong></div>
+    <div><span>Multa por día</span><strong class="mono">$2.000</strong></div>
+  </div>
+
+  <h2>Solicitudes pendientes <span class="n">1</span></h2>
+  <section class="ficha">
+    <header><strong>Por aprobar</strong><span class="mono">18 oct 2026</span></header>
+    <div class="req">
+      <div><div class="t">Clean Code</div><div class="m">María Rodríguez · docente · <span class="mono">U003</span></div></div>
+      <div><label>Ejemplar</label><select><option>EJ-0006 · Sala 1 / Estante C4</option></select></div>
+      <div><label>Vence</label><input class="mono" value="25/10/2026"></div>
+      <div class="acts"><button class="btn pri"><i data-lucide="check"></i>Aprobar</button><button class="btn ghost">Rechazar</button></div>
+    </div>
+  </section>
+
+  <h2>Préstamos activos <span class="n">2</span></h2>
+  <table>
+    <thead><tr><th>Libro</th><th>Usuario</th><th>Ejemplar</th><th>Vence</th><th>Situación</th><th class="r">Multa estimada</th></tr></thead>
+    <tbody>
+      <tr><td><b>Database System Concepts</b></td><td>Laura Pérez</td><td class="mono">EJ-0002</td><td class="mono">13/10/2026</td><td><span class="stamp">Vencido · 5 d</span></td><td class="r mono fine">$10.000</td></tr>
+      <tr><td><b>Cien años de soledad</b></td><td>Carlos Gómez</td><td class="mono">EJ-0004</td><td class="mono">23/10/2026</td><td><span class="ok">Vigente</span></td><td class="r mono dim">$0</td></tr>
+    </tbody>
+  </table>
+</main>
+<div class="label">A · Ficha — tarjeta de catálogo</div>
+<script>lucide.createIcons()</script>
+</body>
+</html>
