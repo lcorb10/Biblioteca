@@ -79,7 +79,8 @@
       if (reduce || f.dataset.go) return;
       e.preventDefault();
       f.dataset.go = "1";
-      const action = e.submitter?.formAction;
+      // getAttribute: la propiedad formAction devuelve la URL de la página si el botón no tiene formaction
+      const action = e.submitter?.getAttribute("formaction");
       if (action) f.action = action;
       f.closest(".req").classList.add("leaving");
       setTimeout(() => f.submit(), 220);
