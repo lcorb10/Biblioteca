@@ -208,7 +208,7 @@ def contexto():
 @app.errorhandler(pymysql.err.OperationalError)
 def error_conexion(e):
     return render_template("error.html", titulo="Sin conexión con la base de datos",
-                           detalle=f"Revisa config.toml y que el servidor MySQL en la nube esté encendido. ({e})"), 503
+                           detalle=f"Revisa la configuración de MySQL (config.toml o variables de entorno MYSQL_*) y que el servidor esté encendido. ({e})"), 503
 
 
 @app.errorhandler(403)

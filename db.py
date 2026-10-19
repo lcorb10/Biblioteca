@@ -14,10 +14,10 @@ BASE_DIR = Path(__file__).resolve().parent
 
 def load_config():
     """Lee variables de entorno (para el despliegue en la nube) o config.toml (en local)."""
-    if os.environ.get("MYSQL_HOST"):
+    if os.environ.get("MYSQL_HOST", "").strip():
         return {
-            "mysql": {"host": os.environ["MYSQL_HOST"], "port": os.environ.get("MYSQL_PORT", 3306),
-                      "user": os.environ["MYSQL_USER"], "password": os.environ["MYSQL_PASSWORD"],
+            "mysql": {"host": os.environ["MYSQL_HOST"].strip(), "port": os.environ.get("MYSQL_PORT", "").strip() or 3306,
+                      "user": os.environ.get("MYSQL_USER", "").strip(), "password": os.environ.get("MYSQL_PASSWORD", ""),
                       "database": os.environ.get("MYSQL_DATABASE", "biblioteca"),
                       "ssl": os.environ.get("MYSQL_SSL", "") == "1"},
             "flask": {"secret_key": os.environ.get("SECRET_KEY")},
@@ -26,7 +26,8 @@ def load_config():
         if p.exists():
             with open(p, "rb") as f:
                 return tomllib.load(f)
-    raise RuntimeError("Falta config.toml con la sección [mysql].")
+    # Sin configuración la app igual arranca y muestra un aviso en lugar de caerse
+    return {"mysql": None, "flask": {"secret_key": os.environ.get("SECRET_KEY")}}
 
 
 CONFIG = load_config()
@@ -37,6 +38,9 @@ CONFIG = load_config()
 # ======================================================
 def get_conn():
     cfg = CONFIG["mysql"]
+    if not cfg:
+        raise pymysql.err.OperationalError(
+            2003, "Base de datos no configurada: define MYSQL_HOST, MYSQL_PORT, MYSQL_USER y MYSQL_PASSWORD")
     return pymysql.connect(
         host=cfg["host"],
         port=int(cfg.get("port", 3306)),
