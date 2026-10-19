@@ -13,3 +13,6 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Credenciales de la base en la nube
+config.nube.toml
